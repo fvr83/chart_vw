@@ -44,6 +44,17 @@ def change_depth(step):
         update_image()
 
 
+def change_depth_from_jump(depth):
+    index = depths.index(depth)
+    depth = depths[index]
+    depth_var.set(depth)
+    group = index // 13
+    if group != current_group:
+        show_group(group)
+    else:
+        update_image()
+
+
 def action_keys(event):
     if event.keysym == "r":
         spot_action_var.set("raise-raise-low")
@@ -56,6 +67,12 @@ def action_keys(event):
     elif event.keysym == "x":
         spot_action_var.set("call-shove")
     update_image()
+
+
+def depth_jump(event):
+    index = jump_keys.index(event.char)
+    depth = jumps_vars[index].get()
+    change_depth_from_jump(depth)
 
 
 
@@ -156,6 +173,7 @@ depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", 
 groups = [depths[i:i+13] for i in range(0, len(depths), 13)]
 action_btn_dict = {"RR": "raise-raise-low", "RS": "raise-shove", "CR1": "call-raise-low", "CR2": "call-raise-low_med", "CS": "call-shove"}
 raise_sizes = ["low", "low_med"]
+jump_keys = ["y", "u", "i", "o", "p"]
 
 root = tk.Tk()
 root.title("XXXXXXXXX")
@@ -165,6 +183,12 @@ root.resizable(False, False)
 position_var = tk.StringVar(value="EP")
 depth_var = tk.StringVar(value="100")
 spot_action_var = tk.StringVar(value="raise-raise-low")
+jump_1_var = tk.StringVar(value="100")
+jump_2_var = tk.StringVar(value="50")
+jump_3_var = tk.StringVar(value="25")
+jump_4_var = tk.StringVar(value="15")
+jump_5_var = tk.StringVar(value="10")
+jumps_vars = [jump_1_var, jump_2_var, jump_3_var, jump_4_var, jump_5_var]
 
 image_label = tk.Label(root)
 image_label.place(x=2, y=0)
@@ -195,6 +219,13 @@ prev = prev + spacing + gap + 433
 for a, (k, v) in enumerate(action_btn_dict.items()):
     tk.Radiobutton(bottom_menu, command=update_image, text=k, variable=spot_action_var, value=v, indicatoron=False, selectcolor="#7b5eb1", background="#c3b4dd").place(x= prev + (a * (btn_width + gap)), y=top_tab, width=btn_width, height=btn_height)
 
+prev = prev + spacing + gap + 140
+for i in range(len(jump_keys)):
+    jump_entry = tk.Entry(bottom_menu, width=3, font=("Arial", 8), textvariable=jumps_vars[i], justify="right")
+    jump_entry.place(x=prev + (i * (gap + 33)), y=top_tab)
+
+
+
 root.bind("<Left>", lambda e: change_position(-1))
 root.bind("<Right>", lambda e: change_position(1))
 root.bind("<Up>", lambda e: change_depth(-1))
@@ -204,5 +235,8 @@ root.bind("a", action_keys)
 root.bind("s", action_keys)
 root.bind("t", action_keys)
 root.bind("x", action_keys)
+for i, _ in enumerate(jump_keys):
+    root.bind(jump_keys[i], depth_jump)
+root.bind("<Tab>", lambda e: (root.focus(), "break")[1])
 
 root.mainloop()
