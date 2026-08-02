@@ -478,7 +478,8 @@ for path in Path(origin_folder).iterdir():
     file_extension = str(path).removeprefix(f"{origin_folder}\\")
     file_name = file_extension.removesuffix(".txt")
     gap, tier, depth, game_mode, chip_mode = file_name.split("_") # final_folder
-    if depth not in ["25bb"]:
+
+    if depth not in ["15bb"]: 
 
         continue
     content = path.read_text(encoding="utf-8")

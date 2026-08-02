@@ -173,7 +173,9 @@ depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", 
 groups = [depths[i:i+13] for i in range(0, len(depths), 13)]
 action_btn_dict = {"RR": "raise-raise-low", "RS": "raise-shove", "CR1": "call-raise-low", "CR2": "call-raise-low_med", "CS": "call-shove"}
 raise_sizes = ["low", "low_med"]
-jump_keys = ["y", "u", "i", "o", "p"]
+
+jump_keys = ["Y", "U", "I", "O", "P", "H", "J", "K", "L"]
+jump_keys = [i.lower() for i in jump_keys]
 
 root = tk.Tk()
 root.title("XXXXXXXXX")
@@ -185,10 +187,14 @@ depth_var = tk.StringVar(value="100")
 spot_action_var = tk.StringVar(value="raise-raise-low")
 jump_1_var = tk.StringVar(value="100")
 jump_2_var = tk.StringVar(value="50")
-jump_3_var = tk.StringVar(value="25")
-jump_4_var = tk.StringVar(value="15")
-jump_5_var = tk.StringVar(value="10")
-jumps_vars = [jump_1_var, jump_2_var, jump_3_var, jump_4_var, jump_5_var]
+jump_3_var = tk.StringVar(value="30")
+jump_4_var = tk.StringVar(value="25")
+jump_5_var = tk.StringVar(value="20")
+jump_6_var = tk.StringVar(value="15")
+jump_7_var = tk.StringVar(value="10")
+jump_8_var = tk.StringVar(value="5")
+jump_9_var = tk.StringVar(value="1")
+jumps_vars = [jump_1_var, jump_2_var, jump_3_var, jump_4_var, jump_5_var, jump_6_var, jump_7_var, jump_8_var, jump_9_var]
 
 image_label = tk.Label(root)
 image_label.place(x=2, y=0)
@@ -222,7 +228,8 @@ for a, (k, v) in enumerate(action_btn_dict.items()):
 prev = prev + spacing + gap + 140
 for i in range(len(jump_keys)):
     jump_entry = tk.Entry(bottom_menu, width=3, font=("Arial", 8), textvariable=jumps_vars[i], justify="right")
-    jump_entry.place(x=prev + (i * (gap + 33)), y=top_tab)
+    jump_entry.place(x=prev + 3 + (i * (gap + 42)), y=top_tab + 3)
+    jump_entry_label = tk.Label(bottom_menu, bg=bottom_menu_background, justify="right", width=2, text=f"{jump_keys[i]}:").place(x=prev - 15 + (i * (gap + 42)), y=top_tab + 1)
 
 
 
@@ -235,8 +242,10 @@ root.bind("a", action_keys)
 root.bind("s", action_keys)
 root.bind("t", action_keys)
 root.bind("x", action_keys)
-for i, _ in enumerate(jump_keys):
-    root.bind(jump_keys[i], depth_jump)
+for key in jump_keys:
+    root.bind(key, depth_jump)
+# for key in jump_keys:
+#     root.bind(f"<Shift-{key}>", depth_jump)
 root.bind("<Tab>", lambda e: (root.focus(), "break")[1])
 
 root.mainloop()
