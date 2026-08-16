@@ -174,7 +174,7 @@ groups = [depths[i:i+13] for i in range(0, len(depths), 13)]
 action_btn_dict = {"RR": "raise-raise-low", "RS": "raise-shove", "CR1": "call-raise-low", "CR2": "call-raise-low_med", "CS": "call-shove"}
 raise_sizes = ["low", "low_med"]
 
-jump_keys = ["Y", "U", "I", "O", "P", "H", "J", "K", "L"]
+jump_keys = ["Y", "U", "I", "O", "P"]#, "H", "J", "K", "L"]
 jump_keys = [i.lower() for i in jump_keys]
 
 root = tk.Tk()
@@ -183,7 +183,7 @@ root.geometry("1366x707+0+0")
 root.resizable(False, False)
 
 position_var = tk.StringVar(value="EP")
-depth_var = tk.StringVar(value="100")
+depth_var = tk.StringVar(value="50")
 spot_action_var = tk.StringVar(value="raise-raise-low")
 jump_1_var = tk.StringVar(value="100")
 jump_2_var = tk.StringVar(value="50")
@@ -227,9 +227,14 @@ for a, (k, v) in enumerate(action_btn_dict.items()):
 
 prev = prev + spacing + gap + 140
 for i in range(len(jump_keys)):
+    # jump_entry_label = tk.Label(bottom_menu, bg=bottom_menu_background, justify="right", width=2, text=f"{jump_keys[i]}:").place(x=prev - 15 + (i * (gap + 42)), y=top_tab + 1)
+    if jump_keys[i].lower() in ['y', 'p', 'j']:
+        jump_entry_label = tk.Label(bottom_menu, bd=0, relief="flat", bg=bottom_menu_background, justify="right", text=f"{jump_keys[i]}:").place(x=prev - 14 + (i * (gap + 30)), y=top_tab + 2)
+    else:
+        jump_entry_label = tk.Label(bottom_menu, bd=0, relief="flat", bg=bottom_menu_background, justify="right", text=f"{jump_keys[i]}:").place(x=prev - 14 + (i * (gap + 30)), y=top_tab + 3)
+
     jump_entry = tk.Entry(bottom_menu, width=3, font=("Arial", 8), textvariable=jumps_vars[i], justify="right")
-    jump_entry.place(x=prev + 3 + (i * (gap + 42)), y=top_tab + 3)
-    jump_entry_label = tk.Label(bottom_menu, bg=bottom_menu_background, justify="right", width=2, text=f"{jump_keys[i]}:").place(x=prev - 15 + (i * (gap + 42)), y=top_tab + 1)
+    jump_entry.place(x=prev - 4 + (i * (gap + 30)), y=top_tab + 3)
 
 
 
