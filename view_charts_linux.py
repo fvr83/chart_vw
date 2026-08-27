@@ -77,7 +77,7 @@ def depth_jump(event):
 
 
 def update_image():
-    image_depth = Image.new("RGB", (1358, 676), "#FFFFFF")
+    image_depth = Image.new("RGB", (1356, 676), "#FFFFFF")
 
     default_folder = Path(
         f"img_results/MTT/ChipEV/G0_T0/ranking/raise-raise-low/{depth_var.get()}/{position_var.get()}"
