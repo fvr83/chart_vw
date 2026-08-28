@@ -77,7 +77,7 @@ def depth_jump(event):
 
 
 def update_image():
-    image_depth = Image.new("RGB", (1358, 676), "#FFFFFF")
+    image_depth = Image.new("RGB", (1356, 676), "#FFFFFF")
 
     default_folder = Path(
         f"img_results/MTT/ChipEV/G0_T0/ranking/raise-raise-low/{depth_var.get()}/{position_var.get()}"
@@ -165,7 +165,9 @@ color_data = { # call color 20% S in HSV BB+BU+CO R -10% V in HSV
     "BB": ['#FFFFFF', '#ccffff', '#00e6e6', '#00a6a6', '#006666', '#002626', '#ffff00'],
 }
 
-positions_offset = {'EP': (0, 0), 'MP': (344, 0), 'LJ': (688, 0), 'HJ': (1032, 0), 'CO': (0, 339), 'BU': (344, 339), 'SB': (688, 339), 'BB': (1032, 339)}
+# positions_offset = {'EP': (0, 0), 'MP': (344, 0), 'LJ': (688, 0), 'HJ': (1032, 0), 'CO': (0, 339), 'BU': (344, 339), 'SB': (688, 339), 'BB': (1032, 339)}
+
+positions_offset = {'EP': (0, 0), 'MP': (342, 0), 'LJ': (686, 0), 'HJ': (1030, 0), 'CO': (0, 339), 'BU': (342, 339), 'SB': (686, 339), 'BB': (1030, 339)}
 
 positions = ['EP', 'MP', 'LJ', 'HJ', 'CO', 'BU', 'SB', 'BB']
 depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", "38", "35", "32", "30", "28", "26", "25", "22", "20", "19", "17", "16", "15", "14", "13", "12", 
@@ -179,7 +181,7 @@ jump_keys = [i.lower() for i in jump_keys]
 
 root = tk.Tk()
 root.title("XXXXXXXXX")
-root.geometry("1366x707+0+0")
+root.geometry("1356x701+0+0")
 root.resizable(False, False)
 
 position_var = tk.StringVar(value="EP")
@@ -197,7 +199,7 @@ jump_9_var = tk.StringVar(value="1")
 jumps_vars = [jump_1_var, jump_2_var, jump_3_var, jump_4_var, jump_5_var, jump_6_var, jump_7_var, jump_8_var, jump_9_var]
 
 image_label = tk.Label(root)
-image_label.place(x=2, y=0)
+image_label.place(x=-2, y=-2)
 
 top_tab = 1
 left_tab = 5
@@ -208,7 +210,7 @@ gap = 2
 bottom_menu_background = "#AAAAA7"
 
 bottom_menu = tk.Frame(root, width=1366, height=27, bg=bottom_menu_background)
-bottom_menu.place(x=0, y=680)
+bottom_menu.place(x=0, y=676)
 
 for p, pos in enumerate(positions):
     color_selected = color_data[pos][2]
