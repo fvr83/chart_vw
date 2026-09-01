@@ -51,7 +51,7 @@ def draw_proof_chart(combo_colors_info_dict, spot_actions_text_colors, combos_or
     y = 0
     
     x_i = 0
-    for part in spot_actions_text_colors:
+    for idx_spot_actions_text_colors, part in enumerate(spot_actions_text_colors):
         text = part[0]
         text_color = part[1]
         bg_color =  part[2]
@@ -61,17 +61,22 @@ def draw_proof_chart(combo_colors_info_dict, spot_actions_text_colors, combos_or
         except:
             pass
         text_width, text_height = get_text_boundaries(text, title_font)
-        draw.rectangle((x_i + 2, y - 1, (x_i + 2) + text_width, (y - 1) + title_bar_height), fill=bg_color, outline=None)
-        draw.text((x_i + 2, y - 1), text, font=title_font, fill=text_color)
+        if idx_spot_actions_text_colors == 1:
+            draw.rectangle((x_i, y - 1, (x_i) + text_width - 1, (y - 1) + title_bar_height), fill=bg_color, outline=None)
+        else:
+            draw.rectangle((x_i, y - 1, (x_i) + text_width - 2, (y - 1) + title_bar_height), fill=bg_color, outline=None)
+        draw.text((x_i, y - 1), text, font=title_font, fill=text_color)
         if percent:
-            x_i += text_width + 1
+            x_i += text_width - 1
             percent = str(round(percent))
             percent_width, percent_height = get_text_boundaries(percent, title_font)
-            draw.rectangle((x_i + 2, y - 1, (x_i + 2) + percent_width, (y - 1) + title_bar_height), fill="#5f6661", outline=None)
-            draw.text((x_i + 2, y - 1), percent, font=title_font, fill="#ffffff")
+            draw.rectangle((x_i, y - 1, (x_i) + percent_width, (y - 1) + title_bar_height), fill="#5f6661", outline=None)
+            draw.text((x_i, y - 1), percent, font=title_font, fill="#ffffff")
             x_i += percent_width + 2
+        elif idx_spot_actions_text_colors == 1:
+            x_i += text_width + 1
         else:
-            x_i += text_width + 2
+            x_i += text_width
 
     draw.rectangle((x, y, chart_width, title_bar_height), outline="#000000")
 
@@ -143,7 +148,7 @@ def draw_proof_chart(combo_colors_info_dict, spot_actions_text_colors, combos_or
     return chart
 
 
-def normalize_float(value, decimals = None):
+def normalize_float(value, decimals = 1):
     value = float(value)
     if value.is_integer():
 
@@ -154,6 +159,19 @@ def normalize_float(value, decimals = None):
         return value
 
     return round(value, decimals)
+
+
+def is_close_freq(value):
+    integer = int(value)
+    decimal = value - integer
+    if decimal <= 0.15:
+
+        return integer
+    elif decimal >= 0.85:
+
+        return integer + 1
+
+    return normalize_float(value)
 
 
 def sort_key(item: tuple[str, tuple[float, dict[str, list[float]]]], spot_most_frequent_nonfold_actions: list[str], vs: int):
@@ -254,7 +272,7 @@ def parse_data(mode_depth, positions_actions, pot_odds_and_stacks, actions_frequ
                     raise_idx = position_raise_actions[::-1].index(action)
                     bg_color = color_data[position][2 + raise_idx]
                     text_color = "#ffffff" if position in ["LJ", "SB"] or raise_idx > 1 else "#000000"
-                    action_string = f"{position_name_change[position]} {action_name_change[action_name_part]}{action_size_part}"
+                    action_string = f"{position_name_change[position]} {action_name_change[action_name_part]}{normalize_float(action_size_part)}"
                     spot_string += f"_{action_string}"
                     spot_actions_text_colors.append([action_string, text_color, bg_color])
                 elif action.startswith("C"):
@@ -303,26 +321,26 @@ def parse_data(mode_depth, positions_actions, pot_odds_and_stacks, actions_frequ
                 raise_idx = spot_raise_actions[::-1].index(action)
                 bg_color = color_data[position][2 + raise_idx]
                 text_color = "#ffffff" if position in ["LJ", "SB"] or raise_idx > 1 else "#000000"
-                action_string = f"{action_name_change[action_name_part]}{action_size_part}: {freq}"
+                action_string = f"{action_name_change[action_name_part]}{normalize_float(action_size_part)}[{is_close_freq(freq)}]"
                 percent = freq / min_action_freq
                 spot_actions_text_colors.append([action_string, text_color, bg_color, percent])
             elif action.startswith("C"):
                 text_color = "#000000"
                 bg_color = color_data[original_spot_position][1]
-                action_string = f"{action_name_change[action]}: {freq}"
+                action_string = f"{action_name_change[action]}[{is_close_freq(freq)}]"
                 percent = freq / min_action_freq
                 spot_actions_text_colors.append([action_string, text_color, bg_color, percent])
             elif action.startswith("A"):
                 action_name_part, action_size_part = action.split(" ")
                 text_color = "#000000"
                 bg_color = color_data[original_spot_position][6]
-                action_string = f"{action_name_change[action_name_part]}: {freq}"
+                action_string = f"{action_name_change[action_name_part]}[{is_close_freq(freq)}]"
                 percent = freq / min_action_freq
                 spot_actions_text_colors.append([action_string, text_color, bg_color, percent])
             elif action.startswith("F"):
                 text_color = "#000000"
                 bg_color = "#ffffff"
-                action_string = f"{action_name_change[action]}: {freq}"
+                action_string = f"{action_name_change[action]}[{is_close_freq(freq)}]"
                 percent = freq / min_action_freq
                 spot_actions_text_colors.append([action_string, text_color, bg_color, percent])
 
@@ -479,7 +497,7 @@ for path in Path(origin_folder).iterdir():
     file_name = file_extension.removesuffix(".txt")
     gap, tier, depth, game_mode, chip_mode = file_name.split("_") # final_folder
 
-    if depth not in ["3bb"]: 
+    if depth not in ["2bb"]: 
 
         continue
     content = path.read_text(encoding="utf-8")
@@ -490,7 +508,7 @@ for path in Path(origin_folder).iterdir():
 
             continue
         num_blocks += 1
-        # if block_index not in [0]:
+        # if block_index not in [1]: ###
 
         #     continue
         data = {}
@@ -514,3 +532,4 @@ for path in Path(origin_folder).iterdir():
         final_path = final_folder + f"\\{final_file_name}.png"
         print(final_path)
         chart.save(final_path)
+        # chart.show()
