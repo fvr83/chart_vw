@@ -497,7 +497,7 @@ for path in Path(origin_folder).iterdir():
     file_name = file_extension.removesuffix(".txt")
     gap, tier, depth, game_mode, chip_mode = file_name.split("_") # final_folder
 
-    if depth not in ["2bb"]: 
+    if depth not in ["1bb"]: 
 
         continue
     content = path.read_text(encoding="utf-8")
