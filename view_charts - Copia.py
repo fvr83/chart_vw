@@ -75,6 +75,31 @@ def depth_jump(event):
     change_depth_from_jump(depth)
 
 
+# def mouse_zoom(event):
+#     global zoom_index
+
+#     # determina o quadrante do mouse
+#     half_width = root.winfo_width() / 2
+#     half_height = root.winfo_height() / 2
+
+#     if event.x < half_width and event.y < half_height:
+#         quadrant = 1
+#     elif event.x >= half_width and event.y < half_height:
+#         quadrant = 2
+#     elif event.x < half_width and event.y >= half_height:
+#         quadrant = 3
+#     else:
+#         quadrant = 4
+
+#     # muda o zoom
+#     if event.delta > 0:
+#         zoom_index = min(zoom_index + 1, len(zoom_modes) - 1)
+#     else:
+#         zoom_index = max(zoom_index - 1, 0)
+#     if info_image:
+#         update_info_image(info_image, quadrant)
+#     else:
+#         update_image(quadrant)
 def mouse_zoom(event):
     global zoom_index
 
@@ -84,18 +109,39 @@ def mouse_zoom(event):
 
     if event.x < half_width and event.y < half_height:
         quadrant = 1
+
     elif event.x >= half_width and event.y < half_height:
         quadrant = 2
+
     elif event.x < half_width and event.y >= half_height:
         quadrant = 3
+
     else:
         quadrant = 4
 
-    # muda o zoom
-    if event.delta > 0:
-        zoom_index = min(zoom_index + 1, len(zoom_modes) - 1)
+    # determina a direção do scroll
+    if hasattr(event, "delta") and event.delta:
+        # Windows
+        direction = 1 if event.delta > 0 else -1
+
+    elif event.num == 4:
+        # Linux: scroll para cima
+        direction = 1
+
+    elif event.num == 5:
+        # Linux: scroll para baixo
+        direction = -1
+
     else:
-        zoom_index = max(zoom_index - 1, 0)
+        return
+
+    # muda o zoom
+    zoom_index = max(
+        0,
+        min(zoom_index + direction, len(zoom_modes) - 1)
+    )
+
+    # atualiza a imagem mantendo o quadrante
     if info_image:
         update_info_image(info_image, quadrant)
     else:
@@ -441,7 +487,10 @@ for key in jump_keys:
 #     root.bind(f"<Shift-{key}>", depth_jump)
 root.bind("<Tab>", lambda e: (root.focus(), "break")[1])
 
+# root.bind("<MouseWheel>", mouse_zoom)
 root.bind("<MouseWheel>", mouse_zoom)
+root.bind("<Button-4>", mouse_zoom)
+root.bind("<Button-5>", mouse_zoom)
 root.bind("<ButtonPress-1>", start_drag)
 root.bind("<B1-Motion>", drag_image)
 root.bind("<m>", lambda event: toggle_info_image("adds/min.png", event))
