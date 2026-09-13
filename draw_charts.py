@@ -321,26 +321,30 @@ def parse_data(mode_depth, positions_actions, pot_odds_and_stacks, actions_frequ
                 raise_idx = spot_raise_actions[::-1].index(action)
                 bg_color = color_data[position][2 + raise_idx]
                 text_color = "#ffffff" if position in ["LJ", "SB"] or raise_idx > 1 else "#000000"
-                action_string = f"{action_name_change[action_name_part]}{normalize_float(action_size_part)}[{is_close_freq(freq)}]"
+                action_string = f"{action_name_change[action_name_part]}{normalize_float(action_size_part)}[{round(freq)}]"
+                # action_string = f"{action_name_change[action_name_part]}{normalize_float(action_size_part)}[{is_close_freq(freq)}]"
                 percent = freq / min_action_freq
                 spot_actions_text_colors.append([action_string, text_color, bg_color, percent])
             elif action.startswith("C"):
                 text_color = "#000000"
                 bg_color = color_data[original_spot_position][1]
-                action_string = f"{action_name_change[action]}[{is_close_freq(freq)}]"
+                action_string = f"{action_name_change[action]}[{round(freq)}]"
+                # action_string = f"{action_name_change[action]}[{is_close_freq(freq)}]"
                 percent = freq / min_action_freq
                 spot_actions_text_colors.append([action_string, text_color, bg_color, percent])
             elif action.startswith("A"):
                 action_name_part, action_size_part = action.split(" ")
                 text_color = "#000000"
                 bg_color = color_data[original_spot_position][6]
-                action_string = f"{action_name_change[action_name_part]}[{is_close_freq(freq)}]"
+                action_string = f"{action_name_change[action_name_part]}[{round(freq)}]"
+                # action_string = f"{action_name_change[action_name_part]}[{is_close_freq(freq)}]"
                 percent = freq / min_action_freq
                 spot_actions_text_colors.append([action_string, text_color, bg_color, percent])
             elif action.startswith("F"):
                 text_color = "#000000"
                 bg_color = "#ffffff"
-                action_string = f"{action_name_change[action]}[{is_close_freq(freq)}]"
+                action_string = f"{action_name_change[action]}[{round(freq)}]"
+                # action_string = f"{action_name_change[action]}[{is_close_freq(freq)}]"
                 percent = freq / min_action_freq
                 spot_actions_text_colors.append([action_string, text_color, bg_color, percent])
 
@@ -497,7 +501,7 @@ for path in Path(origin_folder).iterdir():
     file_name = file_extension.removesuffix(".txt")
     gap, tier, depth, game_mode, chip_mode = file_name.split("_") # final_folder
 
-    if depth not in ["1bb"]: 
+    if depth not in ["1bb"]: ###
 
         continue
     content = path.read_text(encoding="utf-8")
@@ -508,9 +512,9 @@ for path in Path(origin_folder).iterdir():
 
             continue
         num_blocks += 1
-        # if block_index not in [1]: ###
+        if block_index not in [1]: ###
 
-        #     continue
+            continue
         data = {}
         for line in block.splitlines():
             if " = " not in line:
@@ -531,5 +535,5 @@ for path in Path(origin_folder).iterdir():
         final_file_name = spot_string
         final_path = final_folder + f"\\{final_file_name}.png"
         print(final_path)
-        chart.save(final_path)
-        # chart.show()
+        # chart.save(final_path)
+        chart.show()

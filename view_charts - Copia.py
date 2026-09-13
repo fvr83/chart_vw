@@ -359,12 +359,10 @@ def toggle_info_image(image_path, event=None):
     global info_image
 
     if info_image == image_path:
-        # Já está mostrando essa imagem → volta para o range
         info_image = None
         update_image()
 
     else:
-        # Mostra a imagem solicitada
         info_image = image_path
         update_info_image(image_path)
 
