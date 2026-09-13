@@ -75,8 +75,131 @@ def depth_jump(event):
     change_depth_from_jump(depth)
 
 
+# def mouse_zoom(event):
+#     global zoom_index
 
-def update_image():
+#     # determina o quadrante do mouse
+#     half_width = root.winfo_width() / 2
+#     half_height = root.winfo_height() / 2
+
+#     if event.x < half_width and event.y < half_height:
+#         quadrant = 1
+#     elif event.x >= half_width and event.y < half_height:
+#         quadrant = 2
+#     elif event.x < half_width and event.y >= half_height:
+#         quadrant = 3
+#     else:
+#         quadrant = 4
+
+#     # muda o zoom
+#     if event.delta > 0:
+#         zoom_index = min(zoom_index + 1, len(zoom_modes) - 1)
+#     else:
+#         zoom_index = max(zoom_index - 1, 0)
+#     if info_image:
+#         update_info_image(info_image, quadrant)
+#     else:
+#         update_image(quadrant)
+def mouse_zoom(event):
+    global zoom_index
+
+    # determina o quadrante do mouse
+    half_width = root.winfo_width() / 2
+    half_height = root.winfo_height() / 2
+
+    if event.x < half_width and event.y < half_height:
+        quadrant = 1
+
+    elif event.x >= half_width and event.y < half_height:
+        quadrant = 2
+
+    elif event.x < half_width and event.y >= half_height:
+        quadrant = 3
+
+    else:
+        quadrant = 4
+
+    # determina a direção do scroll
+    if hasattr(event, "delta") and event.delta:
+        # Windows
+        direction = 1 if event.delta > 0 else -1
+
+    elif event.num == 4:
+        # Linux: scroll para cima
+        direction = 1
+
+    elif event.num == 5:
+        # Linux: scroll para baixo
+        direction = -1
+
+    else:
+        return
+
+    # muda o zoom
+    zoom_index = max(
+        0,
+        min(zoom_index + direction, len(zoom_modes) - 1)
+    )
+
+    # atualiza a imagem mantendo o quadrante
+    if info_image:
+        update_info_image(info_image, quadrant)
+    else:
+        update_image(quadrant)
+
+
+def start_drag(event):
+    global drag_start_x, drag_start_y
+    global image_start_x, image_start_y
+
+    # Só permite arrastar com zoom > 1
+    if zoom_modes[zoom_index] <= 1:
+        return
+
+    drag_start_x = event.x_root
+    drag_start_y = event.y_root
+
+    image_start_x = image_label.winfo_x()
+    image_start_y = image_label.winfo_y()
+
+
+def drag_image(event):
+    global image_start_x, image_start_y
+
+    if zoom_modes[zoom_index] <= 1:
+        return
+
+    dx = event.x_root - drag_start_x
+    dy = event.y_root - drag_start_y
+
+    new_x = image_start_x + dx
+    new_y = image_start_y + dy
+
+    # tamanho atual da imagem
+    width = image_label.winfo_width()
+    height = image_label.winfo_height()
+
+    # área disponível (sem o menu inferior)
+    screen_width = root.winfo_width()
+    screen_height = root.winfo_height() - 27
+
+    # Limites horizontais
+    min_x = screen_width - width + 2
+    max_x = -2
+
+    # Limites verticais
+    min_y = screen_height - height + 4
+    max_y = -2
+
+    new_x = max(min_x, min(new_x, max_x))
+    new_y = max(min_y, min(new_y, max_y))
+
+    image_label.place(x=new_x, y=new_y)
+
+
+def update_image(quadrant = 1):
+    global info_image
+    info_image = None
     image_depth = Image.new("RGB", (1356, 676), "#FFFFFF")
 
     default_folder = Path(
@@ -146,11 +269,102 @@ def update_image():
             print("Erro carregando:", path)
             print(e)
 
+    zoom = zoom_modes[zoom_index]
 
-    # mostra no tkinter
-    tk_img = ImageTk.PhotoImage(image_depth)
+    width = int(image_depth.width * zoom)
+    height = int(image_depth.height * zoom)
+
+    zoomed_image = image_depth.resize(
+        (width, height),
+        Image.Resampling.LANCZOS
+    )
+
+    tk_img = ImageTk.PhotoImage(zoomed_image)
+
     image_label.configure(image=tk_img)
     image_label.image = tk_img
+
+    if zoom == 1:
+        x = -2
+        y = -2
+
+    elif quadrant == 1:
+        x = -2
+        y = -2
+
+    elif quadrant == 2:
+        x = root.winfo_width() - width - 2
+        y = -2
+
+    elif quadrant == 3:
+        x = -2
+        y = root.winfo_height() - height - 27
+
+    elif quadrant == 4:
+        x = root.winfo_width() - width - 2
+        y = root.winfo_height() - height - 27
+
+    image_label.place(x=x, y=y)
+
+
+def update_info_image(info_path, quadrant=1):
+    try:
+        image_depth = Image.open(info_path).convert("RGB")
+
+    except Exception as e:
+        print("Erro carregando:", info_path)
+        print(e)
+        return
+
+    zoom = zoom_modes[zoom_index]
+
+    width = int(image_depth.width * zoom)
+    height = int(image_depth.height * zoom)
+
+    zoomed_image = image_depth.resize(
+        (width, height),
+        Image.Resampling.LANCZOS
+    )
+
+    tk_img = ImageTk.PhotoImage(zoomed_image)
+
+    image_label.configure(image=tk_img)
+    image_label.image = tk_img
+
+    # Mesmo posicionamento da update_image()
+    if zoom == 1:
+        x = -2
+        y = -2
+
+    elif quadrant == 1:
+        x = -2
+        y = -2
+
+    elif quadrant == 2:
+        x = root.winfo_width() - width - 2
+        y = -2
+
+    elif quadrant == 3:
+        x = -2
+        y = root.winfo_height() - height - 27
+
+    elif quadrant == 4:
+        x = root.winfo_width() - width - 2
+        y = root.winfo_height() - height - 27
+
+    image_label.place(x=x, y=y)
+
+
+def toggle_info_image(image_path, event=None):
+    global info_image
+
+    if info_image == image_path:
+        info_image = None
+        update_image()
+
+    else:
+        info_image = image_path
+        update_info_image(image_path)
 
 
 
@@ -175,6 +389,14 @@ depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", 
 groups = [depths[i:i+13] for i in range(0, len(depths), 13)]
 action_btn_dict = {"RR": "raise-raise-low", "RS": "raise-shove", "CR1": "call-raise-low", "CR2": "call-raise-low_med", "CS": "call-shove"}
 raise_sizes = ["low", "low_med"]
+
+zoom_modes = [1, 1.33, 2]
+zoom_index = 0
+drag_start_x = 0
+drag_start_y = 0
+image_start_x = 0
+image_start_y = 0
+info_image = None
 
 jump_keys = ["Y", "U", "I", "O", "P"]#, "H", "J", "K", "L"]
 jump_keys = [i.lower() for i in jump_keys]
@@ -262,5 +484,13 @@ for key in jump_keys:
 # for key in jump_keys:
 #     root.bind(f"<Shift-{key}>", depth_jump)
 root.bind("<Tab>", lambda e: (root.focus(), "break")[1])
+
+# root.bind("<MouseWheel>", mouse_zoom)
+root.bind("<MouseWheel>", mouse_zoom)
+root.bind("<Button-4>", mouse_zoom)
+root.bind("<Button-5>", mouse_zoom)
+root.bind("<ButtonPress-1>", start_drag)
+root.bind("<B1-Motion>", drag_image)
+root.bind("<m>", lambda event: toggle_info_image("adds/min.png", event))
 
 root.mainloop()
