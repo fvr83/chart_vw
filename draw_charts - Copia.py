@@ -1035,6 +1035,7 @@ def draw_yellow_black_line(x: int, y: int, img: Image):
 
 
 def draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_order, folded_combos_order, draw_mode = 'raw'):
+    separator_color = '#0000ff'
     title_bar_height = 11
 
     chart_width = (cell_size * matrix_size)
@@ -1090,13 +1091,13 @@ def draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_or
     t_x_i += text_width + 1
 
     for i, ls in enumerate(after):
-        action = short_action_name(ls[0])
+        action = f'{short_action_name(ls[0])}'
         action_width, action_height = get_text_boundaries(action, title_font)
         frequency = str(normalize_float(ls[1]))
         frequency_width, frequency_height = get_text_boundaries(frequency, title_font)
         text_color = ls[2]
         bg_color = ls[3]
-        ratio = str(ls[4])
+        ratio = f'{str(ls[4])}'
         ratio_width, ratio_height = get_text_boundaries(ratio, title_font)
         white_color = ls[5]
         gray_color = ls[6]
@@ -1129,6 +1130,8 @@ def draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_or
                 # lt_string_color = '#EEA452'
                 lt_string_width, lt_string_height = get_text_boundaries(lt_string, title_font_2)
 
+        draw.rectangle((t_x_i, t_y_i + t_y_off, t_x_i, t_y_i + t_y_off + action_height + 1), fill=separator_color, outline=None)
+        t_x_i += 1
         draw.rectangle((t_x_i, t_y_i + t_y_off, t_x_i + action_width - 1, t_y_i + t_y_off + action_height + 1), fill=bg_color, outline=None)
         draw.text((t_x_i, t_y_i), action, font=title_font, fill=text_color)
         t_x_i += action_width
@@ -1145,7 +1148,9 @@ def draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_or
             t_x_i += lt_string_width
         draw.rectangle((t_x_i, t_y_i + t_y_off, t_x_i + ratio_width - 1, t_y_i + t_y_off + ratio_height + 1), fill=bg_color, outline=None)
         draw.text((t_x_i, t_y_i), ratio, font=title_font, fill=text_color)
-        t_x_i += ratio_width + 1
+        t_x_i += ratio_width
+        draw.rectangle((t_x_i, t_y_i + t_y_off, t_x_i, t_y_i + t_y_off + action_height + 1), fill=separator_color, outline=None)
+        t_x_i += 1
 
     draw.rectangle((x, y, chart_width, title_bar_height), outline="#000000")
 
@@ -1188,23 +1193,24 @@ def draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_or
             
             combo_text_color = "#000000" if has_ev else "#737373" if has_play_freq else "#d9d9d9"
 
-            if need_info:
-                need_info_width, need_info_height = get_text_boundaries(need_info, idx_font)
-                draw.text((x_1 + 1 + (cell_size - need_info_width) // 2, y_1 - 1), font=idx_font, text=need_info, fill=combo_text_color)
-
-            xs_offsets = ((-1, 0), (1, 0), (0, -1), (0, 1))
-            combo_width, combo_height = get_text_boundaries(combo, matrix_font)
-            combo_x = x_1 + ((cell_size - combo_width) // 2) + 1
-            combo_y = y_1 + ((cell_size - combo_height) // 2) - 2
-            combo_y = combo_y + 1 if 'Q' in combo else combo_y
-            draw.text((combo_x, combo_y), combo, font=matrix_font, fill=combo_text_color)
-            if (combo not in prefolded_combos) and exclusive_shove:
-                off_color = '#ffffff' if hero_position in ['LJ', 'SB'] else "#404040" if hero_position in ['UTG', 'HJ'] else '#000000'
-                for offset in xs_offsets:
-                    draw.text((combo_x + offset[0], combo_y + offset[1]), combo, font=matrix_font, fill=off_color)
-                draw.text((combo_x, combo_y), combo, font=matrix_font, fill=color_data[hero_position][2])
-
             draw.rectangle((x_1, y_1, x_2, y_2), outline="#000000")
+
+            if draw_mode in ['raw', 'ranking']:
+                if need_info:
+                    need_info_width, need_info_height = get_text_boundaries(need_info, idx_font)
+                    draw.text((x_1 + 1 + (cell_size - need_info_width) // 2, y_1 - 1), font=idx_font, text=need_info, fill=combo_text_color)
+
+                xs_offsets = ((-1, 0), (1, 0), (0, -1), (0, 1))
+                combo_width, combo_height = get_text_boundaries(combo, matrix_font)
+                combo_x = x_1 + ((cell_size - combo_width) // 2) + 1
+                combo_y = y_1 + ((cell_size - combo_height) // 2) - 2
+                combo_y = combo_y + 1 if 'Q' in combo else combo_y
+                draw.text((combo_x, combo_y), combo, font=matrix_font, fill=combo_text_color)
+                if (combo not in prefolded_combos) and exclusive_shove:
+                    off_color = '#ffffff' if hero_position in ['LJ', 'SB'] else "#404040" if hero_position in ['UTG', 'HJ'] else '#000000'
+                    for offset in xs_offsets:
+                        draw.text((combo_x + offset[0], combo_y + offset[1]), combo, font=matrix_font, fill=off_color)
+                    draw.text((combo_x, combo_y), combo, font=matrix_font, fill=color_data[hero_position][2])
 
             if draw_mode == 'ranking':
                 combo_rank = str(combos_order.index(combo) + 1)
@@ -1223,7 +1229,7 @@ def draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_or
 # ------- MAIN LOOP -------
 # ==================================================
 origin_folder = Path('G0_T0_text_results')
-destination_folder = Path('img_results')
+destination_folder = Path('img_results_test')
 
 for path_idx, path in enumerate(Path(origin_folder).iterdir()):
     if not path.is_file():
@@ -1233,8 +1239,8 @@ for path_idx, path in enumerate(Path(origin_folder).iterdir()):
     file_stem = path.stem
 
     gap, tier, depth_str, game_mode_str, chip_mode_str = file_stem.split('_')
-
-    # if depth_str not in ['1bb']: ################################################################################################
+    
+    # if depth_str not in ['200bb']: ################################################################################################
 
     #     continue
 
@@ -1248,8 +1254,7 @@ for path_idx, path in enumerate(Path(origin_folder).iterdir()):
             continue
         num_blocks += 1
 
-        # # if block_idx % 2 != 0: ################################################################################################
-        # if block_idx not in [105]: # 15: UTG1_vs_UTG_RFI, 32: LJ_RFI, 48: HJ_RFI, 64: CO_RFI, 80: BU_RFI, 96: SB_RFI, 123: BB_vs_SB_limp ###############################################################################################
+        # if block_idx not in [1]: # 15: UTG1_vs_UTG_RFI, 32: LJ_RFI, 48: HJ_RFI, 64: CO_RFI, 80: BU_RFI, 96: SB_RFI, 123: BB_vs_SB_limp ###############################################################################################
 
         #     continue
 
@@ -1259,7 +1264,7 @@ for path_idx, path in enumerate(Path(origin_folder).iterdir()):
 
         chart_types = ['raw', 'ranking']
         for chart_type in chart_types:
-            if chart_type != 'ranking': ##################################################################
+            if chart_type not in ['ranking']: ##################################################################
 
                 continue
             final_folder = Path(destination_folder, game_mode_str, chip_mode_str, f'{gap}_{tier}', chart_type, spot_actions_taken_label, depth_str.removesuffix('bb'), position_name_change[hero_position])
