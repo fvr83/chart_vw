@@ -197,46 +197,144 @@ def drag_image(event):
     image_label.place(x=new_x, y=new_y)
 
 
-def update_image(quadrant = 1):
+# def update_image(quadrant = 1):
+#     global info_image
+#     info_image = None
+#     image_depth = Image.new("RGB", (1356, 676), "#FFFFFF")
+
+#     default_folder = Path(
+#         f"img_results_test/MTT/ChipEV/G0_T0/ranking/raise-raise-low/{depth_var.get()}/{position_var.get()}"
+#     )
+
+#     target_folder = Path(
+#         f"img_results_test/MTT/ChipEV/G0_T0/ranking/{spot_action_var.get()}/{depth_var.get()}/{position_var.get()}"
+#     )
+
+#     folder = target_folder if target_folder.exists() else default_folder
+
+#     if not folder.exists():
+#         print("Pasta não existe:", folder)
+#         return
+
+#     for path in folder.glob("*.png"):
+
+#         name = path.stem
+
+#         if " oR" in name:
+#             pos = position_var.get()
+
+#         elif "vs_" in name:
+
+#             after_vs = name.split("vs_")[1]
+
+#             if "_" in after_vs:
+                
+#                 pos = None
+
+#                 for p in reversed(positions):
+#                     if f"_{p}" in name:
+#                         pos = p
+#                         break
+
+#                 if pos is None:
+#                     continue
+
+#             else:
+                
+#                 pos = after_vs.split()[0]
+
+#         else:
+#             continue
+
+
+#         if pos not in positions_offset:
+#             continue
+
+
+#         x, y = positions_offset[pos]
+
+#         try:
+#             img = Image.open(path).convert("RGB")
+#             image_depth.paste(img, (x, y))
+
+#         except Exception as e:
+#             print("Erro carregando:", path)
+#             print(e)
+
+#     zoom = zoom_modes[zoom_index]
+
+#     width = int(image_depth.width * zoom)
+#     height = int(image_depth.height * zoom)
+
+#     zoomed_image = image_depth.resize(
+#         (width, height),
+#         Image.Resampling.LANCZOS
+#     )
+
+#     tk_img = ImageTk.PhotoImage(zoomed_image)
+
+#     image_label.configure(image=tk_img)
+#     image_label.image = tk_img
+
+#     if zoom == 1:
+#         x = -2
+#         y = -2
+
+#     elif quadrant == 1:
+#         x = -2
+#         y = -2
+
+#     elif quadrant == 2:
+#         x = root.winfo_width() - width - 2
+#         y = -2
+
+#     elif quadrant == 3:
+#         x = -2
+#         y = root.winfo_height() - height - 27
+
+#     elif quadrant == 4:
+#         x = root.winfo_width() - width - 2
+#         y = root.winfo_height() - height - 27
+
+#     image_label.place(x=x, y=y)
+
+
+def update_image(quadrant=1):
     global info_image
+
     info_image = None
     image_depth = Image.new("RGB", (1356, 676), "#FFFFFF")
 
     default_folder = Path(
-        f"img_results_test/MTT/ChipEV/G0_T0/ranking/raise-raise-low/{depth_var.get()}/{position_var.get()}"
+        f"img_results_test/MTT/ChipEV/G0_T0/{chart_type_var.get()}/raise-raise-low/{depth_var.get()}/{position_var.get()}"
     )
 
     target_folder = Path(
-        f"img_results_test/MTT/ChipEV/G0_T0/ranking/{spot_action_var.get()}/{depth_var.get()}/{position_var.get()}"
+        f"img_results_test/MTT/ChipEV/G0_T0/{chart_type_var.get()}/{spot_action_var.get()}/{depth_var.get()}/{position_var.get()}"
     )
 
-    # usa target se existir, senão usa default
     folder = target_folder if target_folder.exists() else default_folder
 
     if not folder.exists():
         print("Pasta não existe:", folder)
         return
 
+    or_found = False
+
     for path in folder.glob("*.png"):
 
         name = path.stem
 
-        # Descobre a posição da imagem
         if " oR" in name:
-            # Exemplo: EP oR.png
             pos = position_var.get()
+            or_found = True
 
         elif "vs_" in name:
 
             after_vs = name.split("vs_")[1]
 
-            # Formato:
-            # HJ vs_MP R2.png
-            # EP vs_EP R2.1_BB R12.6.png
-
             if "_" in after_vs:
 
-                # procura a última posição depois do _
                 pos = None
 
                 for p in reversed(positions):
@@ -248,16 +346,13 @@ def update_image(quadrant = 1):
                     continue
 
             else:
-                # formato HJ vs_MP R2.png
                 pos = after_vs.split()[0]
 
         else:
             continue
 
-
         if pos not in positions_offset:
             continue
-
 
         x, y = positions_offset[pos]
 
@@ -268,6 +363,27 @@ def update_image(quadrant = 1):
         except Exception as e:
             print("Erro carregando:", path)
             print(e)
+
+    if not or_found and folder != default_folder and default_folder.exists():
+
+        for path in default_folder.glob("* oR*.png"):
+
+            pos = position_var.get()
+
+            if pos not in positions_offset:
+                continue
+
+            x, y = positions_offset[pos]
+
+            try:
+                img = Image.open(path).convert("RGB")
+                image_depth.paste(img, (x, y))
+                or_found = True
+                break
+
+            except Exception as e:
+                print("Erro carregando oR:", path)
+                print(e)
 
     zoom = zoom_modes[zoom_index]
 
@@ -379,8 +495,6 @@ color_data = { # call color 20% S in HSV BB+BU+CO R -10% V in HSV
     "BB": ['#FFFFFF', '#ccffff', '#00e6e6', '#00a6a6', '#006666', '#002626', '#ffff00'],
 }
 
-# positions_offset = {'EP': (0, 0), 'MP': (344, 0), 'LJ': (688, 0), 'HJ': (1032, 0), 'CO': (0, 339), 'BU': (344, 339), 'SB': (688, 339), 'BB': (1032, 339)}
-
 positions_offset = {'EP': (0, 0), 'MP': (342, 0), 'LJ': (686, 0), 'HJ': (1030, 0), 'CO': (0, 339), 'BU': (342, 339), 'SB': (686, 339), 'BB': (1030, 339)}
 
 positions = ['EP', 'MP', 'LJ', 'HJ', 'CO', 'BU', 'SB', 'BB']
@@ -388,6 +502,7 @@ depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", 
           "11", "10", "9", "8", "7", "6", "5", "4", "3", "2", "1"]
 groups = [depths[i:i+13] for i in range(0, len(depths), 13)]
 action_btn_dict = {"RR": "raise-raise-low", "RS": "raise-shove", "CR1": "call-raise-low", "CR2": "call-raise-low_med", "CS": "call-shove"}
+chart_types_dict = {'Rk': 'ranking', 'AP': 'agg_pass', 'Mx': 'main_action', '68': 'tot_percents_1', '36': 'tot_percents_2', '04': 'tot_percents_3', 'Th': 'max_thresholds'}
 raise_sizes = ["low", "low_med"]
 
 zoom_modes = [1, 1.33, 2]
@@ -398,7 +513,7 @@ image_start_x = 0
 image_start_y = 0
 info_image = None
 
-jump_keys = ["Y", "U", "I", "O", "P"]#, "H", "J", "K", "L"]
+jump_keys = ['y', 'u', 'i', 'o', 'p']
 jump_keys = [i.lower() for i in jump_keys]
 
 root = tk.Tk()
@@ -407,6 +522,7 @@ root.geometry("1356x701+0+0")
 root.resizable(False, False)
 
 position_var = tk.StringVar(value="EP")
+chart_type_var = tk.StringVar(value='ranking')
 depth_var = tk.StringVar(value="50")
 spot_action_var = tk.StringVar(value="raise-raise-low")
 jump_1_var = tk.StringVar(value="100")
@@ -414,11 +530,8 @@ jump_2_var = tk.StringVar(value="50")
 jump_3_var = tk.StringVar(value="25")
 jump_4_var = tk.StringVar(value="15")
 jump_5_var = tk.StringVar(value="10")
-# jump_6_var = tk.StringVar(value="15")
-# jump_7_var = tk.StringVar(value="10")
-# jump_8_var = tk.StringVar(value="5")
-# jump_9_var = tk.StringVar(value="1")
-jumps_vars = [jump_1_var, jump_2_var, jump_3_var, jump_4_var, jump_5_var]#, jump_6_var, jump_7_var, jump_8_var, jump_9_var]
+
+jumps_vars = [jump_1_var, jump_2_var, jump_3_var, jump_4_var, jump_5_var]
 
 image_label = tk.Label(root)
 image_label.place(x=-2, y=-2)
@@ -481,11 +594,9 @@ root.bind("7", lambda *vars: (position_var.set("SB"), update_image()))
 root.bind("8", lambda *vars: (position_var.set("BB"), update_image()))
 for key in jump_keys:
     root.bind(key, depth_jump)
-# for key in jump_keys:
-#     root.bind(f"<Shift-{key}>", depth_jump)
+
 root.bind("<Tab>", lambda e: (root.focus(), "break")[1])
 
-# root.bind("<MouseWheel>", mouse_zoom)
 root.bind("<MouseWheel>", mouse_zoom)
 root.bind("<Button-4>", mouse_zoom)
 root.bind("<Button-5>", mouse_zoom)

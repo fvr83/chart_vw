@@ -50,6 +50,16 @@ ranks = "AKQJT98765432"
 
 combos_matrix = [[f"{r_1}{r_2}" if i == j else f"{r_1}{r_2}s" if i < j else f"{r_2}{r_1}o" for j, r_2 in enumerate(ranks)] for i, r_1 in enumerate(ranks)]
 
+percentages_dict = {
+    'tot_percents_1': [0.99, 0.98, 0.97, 0.96, 0.95, 0.94, 0.93, 0.92, 0.91, 0.90, 0.89, 0.88, 0.87, 0.86, 0.85, 0.84, 0.83, 0.82, 0.81, 0.80, 0.79, 0.78, 0.77, 0.76, 0.75, 0.74, 0.73, 0.72, 
+                     0.71, 0.70, 0.69, 0.68], 
+    'tot_percents_2': [0.67, 0.66, 0.65, 0.64, 0.63, 0.62, 0.61, 0.6, 0.59, 0.58, 0.57, 0.56, 0.55, 0.54, 0.53, 0.52, 0.51, 0.5, 0.49, 0.48, 0.47, 0.46, 0.45, 0.44, 0.43, 0.42, 0.41, 0.4, 0.39, 
+                     0.38, 0.37, 0.36], 
+    'tot_percents_3': [0.35, 0.34, 0.33, 0.32, 0.31, 0.3, 0.29, 0.28, 0.27, 0.26, 0.25, 0.24, 0.23, 0.22, 0.21, 0.2, 0.19, 0.18, 0.17, 0.16, 0.15, 0.14, 0.13, 0.12, 0.11, 0.1, 0.09, 0.08, 0.07, 
+                     0.06, 0.05, 0.04], 
+    'max_thresholds': [400, 350, 300, 250, 200, 150, 100, 50, 33.33, 25, 20, 16.66, 14.28, 12.5, 11.11, 10]
+}
+
 
 
 # ==================================================
@@ -181,8 +191,6 @@ def get_info_from_spot(gap: int, tier:int , game_mode: str, chip_mode: str, dept
                 continue
             spot_actions_label = None
             villain_position = None
-
-
 
             chain_list = [item for item in actions_chain_list if 'oR' not in item and 'vs' not in item]
             for item in chain_list:
@@ -816,6 +824,7 @@ def parse_data(mode_depth, positions_actions, pot_odds_and_stacks, actions_frequ
     if print_info: print(f'{condensed_spot_most_frequent_actions = }')
     if print_info: print(f'{adjusted_spot_most_frequent_actions = }')
 
+    sorted_raise_actions_list = []
     if sorted_raise_actions:
         sorted_raise_actions_list = list(sorted_raise_actions.keys())
         if print_info: print(f'{sorted_raise_actions_list = }')
@@ -988,7 +997,7 @@ def parse_data(mode_depth, positions_actions, pot_odds_and_stacks, actions_frequ
     if print_info: print(f'{combo_colors_info_dict = }')
     if print_info: print('*' * 50)
 
-    return combo_colors_info_dict, title_spot_actions_colors_list, combos_order, folded_combos_order, hero_position, spot_actions_taken_label, spot_string
+    return combo_colors_info_dict, title_spot_actions_colors_list, combos_order, folded_combos_order, hero_position, spot_actions_taken_label, spot_string, sorted_combos, spot_actions_frequencies
 
 
 def get_text_boundaries(text: str, font: tuple) -> tuple[int]:
@@ -1034,7 +1043,69 @@ def draw_yellow_black_line(x: int, y: int, img: Image):
             draw.point((x, y + i), "#000000")
 
 
-def draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_order, folded_combos_order, draw_mode = 'raw'):
+def draw_dots(combos_dots: dict[str, int], draw: ImageDraw.ImageDraw, mode: str):
+    font = ImageFont.truetype("ROBOTOCONDENSED-BLACK.ttf", size=14)
+    y_spread = 4
+    y_spread_text = 2
+    dots_per_line = (cell_size) // 3
+    color_dots_data = {1: ['#ffffff', '#000000'], 2: ['#404040', '#bfbfbf'], 3:['#bfbfbf', '#404040'], 4:['#000000', '#ffffff']}
+    for row in range(matrix_size):
+        for col in range(matrix_size):
+            x_1 = (cell_size * col)
+            y_1 = 11 + (cell_size * row)
+            combo = combos_matrix[row][col]
+            dots = 0
+            _, combo_height = get_text_boundaries(combo, font)
+            if combo in combos_dots:
+                dots = combos_dots[combo]
+            if mode.startswith('tot_percents'):
+                for i in range(dots):
+                    line_position = int(i % dots_per_line) + 1
+                    color = color_dots_data[(i % 4) + 1]
+                    x = x_1 + ((cell_size - 2) - ((i % dots_per_line) * 3)) 
+                    y = y_1 + ((cell_size - 2) - (i // dots_per_line) * 3) - 1
+                    if i > 15:
+                        y = y_1 + ((cell_size - 2) - (i // dots_per_line) * 3) - combo_height - 1 if 'Q' not in combo else y_1 + ((cell_size - 2) - (i // dots_per_line) * 3) - combo_height + 1 
+                    offsets = [(x+1, y), (x-1, y), (x, y+1), (x, y-1), (x+1, y+1), (x-1, y-1), (x+1, y-1), (x-1, y+1)]
+                    for offset in offsets:
+                        dx, dy = offset
+                        draw.point((dx, dy), fill=color[1])
+                    draw.point((x, y), fill=color[0])
+                    if (i % 4) + 1 == 4:
+                        draw.line((x, y, x + 9, y), fill='blue')
+                        draw.rectangle((x - 1, y - 1, x + 10, y + 1), fill=None, outline=color[1])
+                    if line_position == 8:
+                        draw.line((x, y, x + 21, y), fill='blue')
+                        draw.rectangle((x - 1, y - 1, x + 22, y + 1), fill=None, outline=color[1])
+                    if line_position == 12:
+                        draw.line((x, y, x + 33, y), fill='blue')
+                        draw.rectangle((x - 1, y - 1, x + 34, y + 1), fill=None, outline=color[1])
+            elif mode == 'max_thresholds':
+                for i in range(dots):
+                    line_position = int(i % dots_per_line) + 1
+                    color = color_dots_data[(i % 4) + 1]
+                    x = x_1 + (cell_size - 2 - ((i % dots_per_line) * 3)) 
+                    y = y_1 + (cell_size - y_spread - (i // dots_per_line) * 3)
+                    if i > 7:
+                        y = y_1 + (cell_size - y_spread_text - y_spread - (i // dots_per_line) * 3) - combo_height - 2 if 'Q' not in combo else y_1 + (cell_size - y_spread_text - y_spread - (i // dots_per_line) * 3) - combo_height 
+                    offsets = [(x+1, y), (x-1, y), (x, y+1), (x, y-1), (x+1, y+1), (x-1, y-1), (x+1, y-1), (x-1, y+1)]
+                    for offset in offsets:
+                        dx, dy = offset
+                        draw.point((dx, dy), fill=color[1])
+                    draw.point((x, y), fill=color[0])
+                    if line_position == 4:
+                        draw.line((x, y, x + 9, y), fill='blue')
+                        draw.rectangle((x - 1, y - 1, x + 10, y + 1), fill=None, outline=color[1])
+                    if line_position == 8:
+                        draw.line((x, y, x + 21, y), fill='blue')
+                        draw.rectangle((x - 1, y - 1, x + 22, y + 1), fill=None, outline=color[1])
+                    if line_position == 12:
+                        draw.line((x, y, x + 33, y), fill='blue')
+                        draw.rectangle((x - 1, y - 1, x + 34, y + 1), fill=None, outline=color[1])
+
+
+def draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_order, folded_combos_order, sorted_combos,spot_actions_frequencies, draw_mode = 'raw'):
+    save = False
     separator_color = '#0000ff'
     title_bar_height = 11
 
@@ -1048,6 +1119,7 @@ def draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_or
     title_font_2 = ImageFont.truetype("ROBOTOCONDENSED-SEMIBOLD.ttf", size=10)
     matrix_font = ImageFont.truetype("ROBOTOCONDENSED-BLACK.ttf", size=14)
     idx_font = ImageFont.truetype("ROBOTOCONDENSED-SEMIBOLD.ttf", size=8)
+    sec_font = ImageFont.truetype("ROBOTOCONDENSED-SEMIBOLD.TTF", size=7)
 
     x = 0
     y = 0
@@ -1195,22 +1267,23 @@ def draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_or
 
             draw.rectangle((x_1, y_1, x_2, y_2), outline="#000000")
 
+            xs_offsets = ((-1, 0), (1, 0), (0, -1), (0, 1))
+            combo_width, combo_height = get_text_boundaries(combo, matrix_font)
+            combo_x = x_1 + ((cell_size - combo_width) // 2) + 1
+            combo_y = y_1 + ((cell_size - combo_height) // 2) - 2
+            combo_y = combo_y + 1 if 'Q' in combo else combo_y
+            draw.text((combo_x, combo_y), combo, font=matrix_font, fill=combo_text_color)
+            if (combo not in prefolded_combos) and exclusive_shove:
+                off_color = '#ffffff' if hero_position in ['LJ', 'SB'] else "#404040" if hero_position in ['UTG', 'HJ'] else '#000000'
+                for offset in xs_offsets:
+                    draw.text((combo_x + offset[0], combo_y + offset[1]), combo, font=matrix_font, fill=off_color)
+                draw.text((combo_x, combo_y), combo, font=matrix_font, fill=color_data[hero_position][2])
+
             if draw_mode in ['raw', 'ranking']:
+                save = True
                 if need_info:
                     need_info_width, need_info_height = get_text_boundaries(need_info, idx_font)
                     draw.text((x_1 + 1 + (cell_size - need_info_width) // 2, y_1 - 1), font=idx_font, text=need_info, fill=combo_text_color)
-
-                xs_offsets = ((-1, 0), (1, 0), (0, -1), (0, 1))
-                combo_width, combo_height = get_text_boundaries(combo, matrix_font)
-                combo_x = x_1 + ((cell_size - combo_width) // 2) + 1
-                combo_y = y_1 + ((cell_size - combo_height) // 2) - 2
-                combo_y = combo_y + 1 if 'Q' in combo else combo_y
-                draw.text((combo_x, combo_y), combo, font=matrix_font, fill=combo_text_color)
-                if (combo not in prefolded_combos) and exclusive_shove:
-                    off_color = '#ffffff' if hero_position in ['LJ', 'SB'] else "#404040" if hero_position in ['UTG', 'HJ'] else '#000000'
-                    for offset in xs_offsets:
-                        draw.text((combo_x + offset[0], combo_y + offset[1]), combo, font=matrix_font, fill=off_color)
-                    draw.text((combo_x, combo_y), combo, font=matrix_font, fill=color_data[hero_position][2])
 
             if draw_mode == 'ranking':
                 combo_rank = str(combos_order.index(combo) + 1)
@@ -1220,8 +1293,141 @@ def draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_or
                 if (combo not in prefolded_combos) and (combo in folded_combos_order):
                     folded_combo_rank = str(folded_combos_order.index(combo) + 1)
                     draw.text((x_1 + 1, y_1 - 1), folded_combo_rank, fill="#000000", font=idx_font)
+            
+            if draw_mode.startswith('agg_pass'):
+                save = True
+                dots_action_data = {
+                    'Call': ['#0b4d0b', '#2bd62b', 18, 21],
+                    'Check': ['#0b4d0b', '#2bd62b', 18, 21],  
+                    'Raise': ['#871e1e', '#c77588', 10, 21],
+                    'Allin': ['#000000', "#ffff00", 2, 21]
+                }
+                txt_color = '#000000'
+                txt_border_color = color_data[hero_position][1]
+                offsets = [(-1, 0), (1, 0), (2, 0), (-2, 0)]
+                if combos_dict[combo]:
+                    actions_dict = combos_dict[combo][1]
+                else:
 
-    return chart
+                    continue
+                action_order = []
+                for action in spot_actions_frequencies:
+                    first_letter = action[0].upper()
+                    if first_letter in ('C', 'K'):  # Call / Check
+                        order = 0
+                    elif first_letter == 'R':      # Raise + size
+                        size = float(action.split()[1])
+                        order = size
+                    elif first_letter == 'A':      # Allin
+                        order = float('inf')
+                    else:
+                        continue
+                    action_order.append((order, action))
+                action_order.sort()
+                aggressive_action = action_order[-1][1] if action_order else None
+                passive_action = action_order[0][1] if action_order else None
+                aggressive_action_ev = str(actions_dict[aggressive_action][1])
+                agg_ev_width, _ = get_text_boundaries(aggressive_action_ev, idx_font)
+                for dx, dy in offsets:
+                    draw.text((x_1 + ((cell_size - agg_ev_width) // 2) + dx, (y_1 - 1) + dy), text=aggressive_action_ev, font=idx_font, fill=txt_border_color)
+                draw.text((x_1 + ((cell_size - agg_ev_width) // 2), y_1 - 1), text=aggressive_action_ev, font=idx_font, fill=txt_color)
+                passive_action_ev = str(actions_dict[passive_action][1])
+                pass_act_width, _ = get_text_boundaries(passive_action_ev, sec_font)
+                for dx, dy in offsets:
+                    draw.text((x_1 + ((cell_size - pass_act_width) // 2) + dx, y_1 + 18 + dy), text=passive_action_ev, font=sec_font, fill=txt_border_color)
+                draw.text((x_1 + ((cell_size - pass_act_width) // 2), y_1 + 18), text=passive_action_ev, font=sec_font, fill=txt_color)
+                has_shove_ev = any(v[1] > 0 for k, v in actions_dict.items() if k.startswith('A'))
+                has_raise_ev = any(v[1] > 0 for k, v in actions_dict.items() if k.startswith('R'))
+                has_call_ev = any(v[1] > 0 for k, v in actions_dict.items() if k.startswith('C'))
+                acts_with_ev = []
+                for i, b in enumerate([has_shove_ev, has_raise_ev, has_call_ev]):
+                    if b:
+                        acts_with_ev.append('A') if i == 0 else acts_with_ev.append('R') if i == 1 else acts_with_ev.append('C')
+                for act_w_ev in acts_with_ev:
+                    action = 'Raise' if act_w_ev.startswith('R') else 'Allin' if act_w_ev.startswith('A') else 'Call'
+                    if action in dots_action_data:
+                        x_pos = x_1 + dots_action_data[action][2] - 1
+                        y_pos = y_1 + dots_action_data[action][3] - 3
+                        for i in range(8):
+                            color = dots_action_data[action][1] if i % 2 == 0 else dots_action_data[action][0]
+                            draw.point((x_pos + i, y_pos), fill=color)
+                        x_pos = x_1 + dots_action_data[action][2] - 1
+                        y_pos = y_1 + dots_action_data[action][3] - 2
+                        for i in range(8):
+                            color = dots_action_data[action][0] if i % 2 == 0 else dots_action_data[action][1]
+                            draw.point((x_pos + i, y_pos), fill=color)
+
+            if draw_mode.startswith('main_action'):
+                save = True
+                offsets = [(-1, 0), (1, 0), (1, 0), (-1, 0)]
+                txt_color = '#000000'
+                if combos_dict[combo]:
+                    act_dict = combos_dict[combo][1]
+                else:
+
+                    continue
+                best_action = max(((k, v) for k, v in act_dict.items() if k != 'Fold'), key=lambda item: (item[1][1], item[1][0]))[0]
+                if not best_action:
+
+                    continue
+                best_action_ev = str(act_dict[best_action][1])
+                if best_action.startswith('R'):
+                    best_action_name = short_action_name(best_action)
+                elif best_action.startswith('C'):
+                    best_action_name = 'CALL'
+                else:
+                    best_action_name = best_action.split(' ')[0].upper()
+                ba_ev_width, _ = get_text_boundaries(best_action_ev, idx_font)
+                ba_name_width, _ = get_text_boundaries(best_action_name, idx_font)
+                for dx, dy in offsets:
+                    draw.text(((x_1 + ((cell_size - ba_ev_width) // 2)) + dx, (y_1 - 1) + dy), text=str(best_action_ev), font=idx_font, fill=color_data[hero_position][1])
+                    draw.text(((x_1 + ((cell_size - ba_name_width) // 2)) + dx, (y_1 + 17) + dy), text=str(best_action_name), font=idx_font, fill=color_data[hero_position][1])
+                draw.text((x_1 + ((cell_size - ba_ev_width) // 2), y_1 - 1), str(best_action_ev), fill=txt_color, font=idx_font)
+                draw.text((x_1 + ((cell_size - ba_name_width) // 2), y_1 + 17), best_action_name, fill=txt_color, font=idx_font)
+
+    if draw_mode.startswith('tot_percents'):
+        combos_dots = {}
+        percentages = percentages_dict[draw_mode]
+        total_ev = sum(v[0] for v in sorted_combos.values() if v)
+        for percentage in percentages:
+            goal = total_ev * percentage
+            accumulated = 0
+            for cb, dt in sorted_combos.items():
+                if not dt:
+                    
+                    continue
+                max_ev = dt[0]
+                accumulated += max_ev
+                if accumulated <= goal:
+                    save = True
+                    combos_dots.setdefault(cb, 0)
+                    combos_dots[cb] += 1
+        if save:
+            draw_dots(combos_dots, draw, 'tot_percents')
+            
+        return chart, save
+
+    if draw_mode.startswith('max_thresholds'):
+        combos_dots = {}
+        percentages = percentages_dict[draw_mode]
+        lc_max_ev = max(v[0] for v in sorted_combos.values() if v)
+        for percentage in percentages:
+            goal = lc_max_ev / percentage
+            for cb, dt in sorted_combos.items():
+                if not dt:
+                    
+                    continue
+                cb_max_ev = dt[0]
+                if cb_max_ev >= goal:
+                    save = True
+                    combos_dots.setdefault(cb, 0)
+                    combos_dots[cb] += 1
+        if save:
+            draw_dots(combos_dots, draw, 'max_thresholds')
+            
+        return chart, save
+
+    return chart, save
 
 
 
@@ -1240,7 +1446,7 @@ for path_idx, path in enumerate(Path(origin_folder).iterdir()):
 
     gap, tier, depth_str, game_mode_str, chip_mode_str = file_stem.split('_')
     
-    # if depth_str not in ['200bb']: ################################################################################################
+    # if depth_str not in ['15bb']: ################################################################################################
 
     #     continue
 
@@ -1254,24 +1460,25 @@ for path_idx, path in enumerate(Path(origin_folder).iterdir()):
             continue
         num_blocks += 1
 
-        # if block_idx not in [1]: # 15: UTG1_vs_UTG_RFI, 32: LJ_RFI, 48: HJ_RFI, 64: CO_RFI, 80: BU_RFI, 96: SB_RFI, 123: BB_vs_SB_limp ###############################################################################################
+        # if block_idx not in [123]: # 15: UTG1_vs_UTG_RFI, 32: LJ_RFI, 48: HJ_RFI, 64: CO_RFI, 80: BU_RFI, 96: SB_RFI, 123: BB_vs_SB_limp ###############################################################################################
 
         #     continue
 
         mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict, prefolded_combos = get_data(block)
 
-        combo_colors_info_dict, title_spot_actions_colors_list, combos_order, folded_combos_order, hero_position, spot_actions_taken_label, spot_string = parse_data(mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict, prefolded_combos, False)
+        combo_colors_info_dict, title_spot_actions_colors_list, combos_order, folded_combos_order, hero_position, spot_actions_taken_label, spot_string, sorted_combos, spot_actions_frequencies = parse_data(mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict, prefolded_combos, False)
 
-        chart_types = ['raw', 'ranking']
+        chart_types = ['raw', 'ranking', 'agg_pass', 'main_action', 'tot_percents_1', 'tot_percents_2', 'tot_percents_3', 'max_thresholds']
         for chart_type in chart_types:
-            if chart_type not in ['ranking']: ##################################################################
+            if chart_type in ['raw']: ##################################################################
 
                 continue
             final_folder = Path(destination_folder, game_mode_str, chip_mode_str, f'{gap}_{tier}', chart_type, spot_actions_taken_label, depth_str.removesuffix('bb'), position_name_change[hero_position])
             final_folder.mkdir(parents=True, exist_ok=True)
             final_file_name = spot_string
             final_path = Path(final_folder, f'{final_file_name}.png')
-            chart = draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_order, folded_combos_order, draw_mode=chart_type)
-            chart.save(final_path)
-            # chart.show()
-            print(block_idx, final_path)
+            chart, save = draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_order, folded_combos_order, sorted_combos, spot_actions_frequencies, draw_mode=chart_type)
+            if save:
+                chart.save(final_path)
+                # chart.show()
+                print(block_idx, final_path)
