@@ -1119,7 +1119,7 @@ def draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_or
     title_font_2 = ImageFont.truetype("ROBOTOCONDENSED-SEMIBOLD.ttf", size=10)
     matrix_font = ImageFont.truetype("ROBOTOCONDENSED-BLACK.ttf", size=14)
     idx_font = ImageFont.truetype("ROBOTOCONDENSED-SEMIBOLD.ttf", size=8)
-    sec_font = ImageFont.truetype("ROBOTOCONDENSED-SEMIBOLD.TTF", size=7)
+    sec_font = ImageFont.truetype("ROBOTOCONDENSED-SEMIBOLD.ttf", size=7)
 
     x = 0
     y = 0
