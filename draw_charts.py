@@ -1449,9 +1449,9 @@ for path_idx, path in enumerate(Path(origin_folder).iterdir()):
 
     gap, tier, depth_str, game_mode_str, chip_mode_str = file_stem.split('_')
     
-    if depth_str not in ['100bb']: ################################################################################################
+    # if depth_str not in ['100bb']: ################################################################################################
 
-        continue
+    #     continue
 
     content = path.read_text(encoding='utf-8')
     blocks = content.split('**************************************************')
@@ -1473,7 +1473,7 @@ for path_idx, path in enumerate(Path(origin_folder).iterdir()):
 
         chart_types = ['raw', 'ranking', 'agg_pass', 'main_action', 'tot_percents_1', 'tot_percents_2', 'tot_percents_3', 'max_thresholds']
         for chart_type in chart_types:
-            if chart_type in ['raw']: ##################################################################
+            if chart_type in ['raw']:
 
                 continue
             chart, save = draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_order, folded_combos_order, sorted_combos, spot_actions_frequencies, draw_mode=chart_type)
@@ -1483,19 +1483,18 @@ for path_idx, path in enumerate(Path(origin_folder).iterdir()):
                 final_folder.mkdir(parents=True, exist_ok=True)
                 final_file_name = spot_string
                 final_path = Path(final_folder, f'{final_file_name}.png')
-                chart.save(final_path)
-                # temp_path = Path(final_folder, f'{final_file_name}0.png')
-                # converted_chart = chart.convert("P", palette=Image.ADAPTIVE)
-                # converted_chart.save(temp_path, optimize=True)
-                # subprocess.run([
-                #         "pngquant",
-                #         "--quality=50-70",
-                #         "--speed", "1",
-                #         "--strip",
-                #         "--force",
-                #         "--output", final_path,
-                #         temp_path
-                #     ])
-                # os.remove(temp_path)
+                temp_path = Path(final_folder, f'{final_file_name}0.png')
+                converted_chart = chart.convert("P", palette=Image.ADAPTIVE)
+                converted_chart.save(temp_path, optimize=True)
+                subprocess.run([
+                        "pngquant",
+                        "--quality=50-70",
+                        "--speed", "1",
+                        "--strip",
+                        "--force",
+                        "--output", final_path,
+                        temp_path
+                    ])
+                os.remove(temp_path)
 
                 print(block_idx, final_path)
