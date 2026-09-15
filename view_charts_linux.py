@@ -75,31 +75,6 @@ def depth_jump(event):
     change_depth_from_jump(depth)
 
 
-# def mouse_zoom(event):
-#     global zoom_index
-
-#     # determina o quadrante do mouse
-#     half_width = root.winfo_width() / 2
-#     half_height = root.winfo_height() / 2
-
-#     if event.x < half_width and event.y < half_height:
-#         quadrant = 1
-#     elif event.x >= half_width and event.y < half_height:
-#         quadrant = 2
-#     elif event.x < half_width and event.y >= half_height:
-#         quadrant = 3
-#     else:
-#         quadrant = 4
-
-#     # muda o zoom
-#     if event.delta > 0:
-#         zoom_index = min(zoom_index + 1, len(zoom_modes) - 1)
-#     else:
-#         zoom_index = max(zoom_index - 1, 0)
-#     if info_image:
-#         update_info_image(info_image, quadrant)
-#     else:
-#         update_image(quadrant)
 def mouse_zoom(event):
     global zoom_index
 
@@ -197,46 +172,42 @@ def drag_image(event):
     image_label.place(x=new_x, y=new_y)
 
 
-def update_image(quadrant = 1):
+def update_image(quadrant=1):
     global info_image
+
     info_image = None
     image_depth = Image.new("RGB", (1356, 676), "#FFFFFF")
 
     default_folder = Path(
-        f"img_results/MTT/ChipEV/G0_T0/ranking/raise-raise-low/{depth_var.get()}/{position_var.get()}"
+        f"img_results_test/MTT/ChipEV/G0_T0/{chart_type_var.get()}/raise-raise-low/{depth_var.get()}/{position_var.get()}"
     )
 
     target_folder = Path(
-        f"img_results/MTT/ChipEV/G0_T0/ranking/{spot_action_var.get()}/{depth_var.get()}/{position_var.get()}"
+        f"img_results_test/MTT/ChipEV/G0_T0/{chart_type_var.get()}/{spot_action_var.get()}/{depth_var.get()}/{position_var.get()}"
     )
 
-    # usa target se existir, senão usa default
     folder = target_folder if target_folder.exists() else default_folder
 
     if not folder.exists():
-        print("Pasta não existe:", folder)
+        print("Folder does not exists:", folder)
         return
+
+    or_found = False
 
     for path in folder.glob("*.png"):
 
         name = path.stem
 
-        # Descobre a posição da imagem
         if " oR" in name:
-            # Exemplo: EP oR.png
             pos = position_var.get()
+            or_found = True
 
         elif "vs_" in name:
 
             after_vs = name.split("vs_")[1]
 
-            # Formato:
-            # HJ vs_MP R2.png
-            # EP vs_EP R2.1_BB R12.6.png
-
             if "_" in after_vs:
 
-                # procura a última posição depois do _
                 pos = None
 
                 for p in reversed(positions):
@@ -248,16 +219,13 @@ def update_image(quadrant = 1):
                     continue
 
             else:
-                # formato HJ vs_MP R2.png
                 pos = after_vs.split()[0]
 
         else:
             continue
 
-
         if pos not in positions_offset:
             continue
-
 
         x, y = positions_offset[pos]
 
@@ -266,8 +234,29 @@ def update_image(quadrant = 1):
             image_depth.paste(img, (x, y))
 
         except Exception as e:
-            print("Erro carregando:", path)
+            print("Error loading:", path)
             print(e)
+
+    if not or_found and folder != default_folder and default_folder.exists():
+
+        for path in default_folder.glob("* oR*.png"):
+
+            pos = position_var.get()
+
+            if pos not in positions_offset:
+                continue
+
+            x, y = positions_offset[pos]
+
+            try:
+                img = Image.open(path).convert("RGB")
+                image_depth.paste(img, (x, y))
+                or_found = True
+                break
+
+            except Exception as e:
+                print("Error loading oR:", path)
+                print(e)
 
     zoom = zoom_modes[zoom_index]
 
@@ -388,6 +377,7 @@ depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", 
           "11", "10", "9", "8", "7", "6", "5", "4", "3", "2", "1"]
 groups = [depths[i:i+13] for i in range(0, len(depths), 13)]
 action_btn_dict = {"RR": "raise-raise-low", "RS": "raise-shove", "CR1": "call-raise-low", "CR2": "call-raise-low_med", "CS": "call-shove"}
+chart_types_dict = {'Rk': 'ranking', 'AP': 'agg_pass', 'Mx': 'main_action', '68': 'tot_percents_1', '36': 'tot_percents_2', '04': 'tot_percents_3', 'Th': 'max_thresholds'}
 raise_sizes = ["low", "low_med"]
 
 zoom_modes = [1, 1.33, 2]
@@ -398,7 +388,7 @@ image_start_x = 0
 image_start_y = 0
 info_image = None
 
-jump_keys = ["Y", "U", "I", "O", "P"]#, "H", "J", "K", "L"]
+jump_keys = ['y', 'u', 'i', 'o', 'p']
 jump_keys = [i.lower() for i in jump_keys]
 
 root = tk.Tk()
@@ -407,6 +397,7 @@ root.geometry("1356x701+0+0")
 root.resizable(False, False)
 
 position_var = tk.StringVar(value="EP")
+chart_type_var = tk.StringVar(value='ranking')
 depth_var = tk.StringVar(value="50")
 spot_action_var = tk.StringVar(value="raise-raise-low")
 jump_1_var = tk.StringVar(value="100")
@@ -414,11 +405,9 @@ jump_2_var = tk.StringVar(value="50")
 jump_3_var = tk.StringVar(value="25")
 jump_4_var = tk.StringVar(value="15")
 jump_5_var = tk.StringVar(value="10")
-# jump_6_var = tk.StringVar(value="15")
-# jump_7_var = tk.StringVar(value="10")
-# jump_8_var = tk.StringVar(value="5")
-# jump_9_var = tk.StringVar(value="1")
-jumps_vars = [jump_1_var, jump_2_var, jump_3_var, jump_4_var, jump_5_var]#, jump_6_var, jump_7_var, jump_8_var, jump_9_var]
+
+jumps_vars = [jump_1_var, jump_2_var, jump_3_var, jump_4_var, jump_5_var]
+
 
 image_label = tk.Label(root)
 image_label.place(x=-2, y=-2)
@@ -460,6 +449,10 @@ for i in range(len(jump_keys)):
     jump_entry = tk.Entry(bottom_menu, width=3, font=("Arial", 8), textvariable=jumps_vars[i], justify="right")
     jump_entry.place(x=prev - 4 + (i * (gap + 30)), y=top_tab + 3)
 
+prev = prev + spacing + gap + 145
+for a, (k, v) in enumerate(chart_types_dict.items()):
+    tk.Radiobutton(bottom_menu, command=update_image, text=k, variable=chart_type_var, value=v, indicatoron=False, selectcolor='#7bd0db', background='#d0faff').place(x= prev + (a * (btn_width + gap)), y=top_tab, width=btn_width, height=btn_height)
+
 
 
 root.bind("<Left>", lambda e: change_position(-1))
@@ -479,18 +472,24 @@ root.bind("5", lambda *vars: (position_var.set("CO"), update_image()))
 root.bind("6", lambda *vars: (position_var.set("BU"), update_image()))
 root.bind("7", lambda *vars: (position_var.set("SB"), update_image()))
 root.bind("8", lambda *vars: (position_var.set("BB"), update_image()))
+root.bind("<Key-/>", lambda *vars: (chart_type_var.set("ranking"), update_image()))
+root.bind("<Key-;>", lambda *vars: (chart_type_var.set("agg_pass"), update_image()))
+root.bind("<Key-.>", lambda *vars: (chart_type_var.set("main_action"), update_image()))
+root.bind("<Key-,>", lambda *vars: (chart_type_var.set("tot_percents_1"), update_image()))
+root.bind("<Key-m>", lambda *vars: (chart_type_var.set("tot_percents_2"), update_image()))
+root.bind("<Key-n>", lambda *vars: (chart_type_var.set("tot_percents_3"), update_image()))
+root.bind("<Key-b>", lambda *vars: (chart_type_var.set("max_thresholds"), update_image()))
 for key in jump_keys:
     root.bind(key, depth_jump)
-# for key in jump_keys:
-#     root.bind(f"<Shift-{key}>", depth_jump)
+
 root.bind("<Tab>", lambda e: (root.focus(), "break")[1])
 
-# root.bind("<MouseWheel>", mouse_zoom)
 root.bind("<MouseWheel>", mouse_zoom)
 root.bind("<Button-4>", mouse_zoom)
 root.bind("<Button-5>", mouse_zoom)
 root.bind("<ButtonPress-1>", start_drag)
 root.bind("<B1-Motion>", drag_image)
-root.bind("<m>", lambda event: toggle_info_image("adds/min.png", event))
+root.bind("-", lambda event: toggle_info_image("adds/min.png", event))
 
 root.mainloop()
+
