@@ -301,7 +301,7 @@ def update_info_image(info_path, quadrant=1):
         image_depth = Image.open(info_path).convert("RGB")
 
     except Exception as e:
-        print("Erro carregando:", info_path)
+        print("Error loading:", info_path)
         print(e)
         return
 
