@@ -78,7 +78,6 @@ def depth_jump(event):
 def mouse_zoom(event):
     global zoom_index
 
-    # determina o quadrante do mouse
     half_width = root.winfo_width() / 2
     half_height = root.winfo_height() / 2
 
@@ -94,40 +93,34 @@ def mouse_zoom(event):
     else:
         quadrant = 4
 
-    # determina a direção do scroll
     if hasattr(event, "delta") and event.delta:
-        # Windows
         direction = 1 if event.delta > 0 else -1
 
     elif event.num == 4:
-        # Linux: scroll para cima
         direction = 1
 
     elif event.num == 5:
-        # Linux: scroll para baixo
         direction = -1
 
     else:
         return
 
-    # muda o zoom
     zoom_index = max(
         0,
         min(zoom_index + direction, len(zoom_modes) - 1)
     )
 
-    # atualiza a imagem mantendo o quadrante
     if info_image:
         update_info_image(info_image, quadrant)
     else:
         update_image(quadrant)
 
 
+
 def start_drag(event):
     global drag_start_x, drag_start_y
     global image_start_x, image_start_y
 
-    # Só permite arrastar com zoom > 1
     if zoom_modes[zoom_index] <= 1:
         return
 
@@ -150,19 +143,15 @@ def drag_image(event):
     new_x = image_start_x + dx
     new_y = image_start_y + dy
 
-    # tamanho atual da imagem
     width = image_label.winfo_width()
     height = image_label.winfo_height()
 
-    # área disponível (sem o menu inferior)
     screen_width = root.winfo_width()
     screen_height = root.winfo_height() - 27
 
-    # Limites horizontais
     min_x = screen_width - width + 1
     max_x = -1
 
-    # Limites verticais
     min_y = screen_height - height + 3
     max_y = -1
 
@@ -172,8 +161,11 @@ def drag_image(event):
     image_label.place(x=new_x, y=new_y)
 
 
-def update_image(quadrant=1):
+def update_image(quadrant=None):
     global info_image
+
+    old_x = image_label.winfo_x()
+    old_y = image_label.winfo_y()
 
     info_image = None
     image_depth = Image.new("RGB", (1356, 676), "#FFFFFF")
@@ -277,31 +269,39 @@ def update_image(quadrant=1):
         x = -1
         y = -1
 
-    elif quadrant == 1:
-        x = -1
-        y = -1
+    elif quadrant is not None:
+        if quadrant == 1:
+            x = -1
+            y = -1
 
-    elif quadrant == 2:
-        x = root.winfo_width() - width - 1
-        y = -1
+        elif quadrant == 2:
+            x = root.winfo_width() - width - 1
+            y = -1
 
-    elif quadrant == 3:
-        x = -1
-        y = root.winfo_height() - height - 26
+        elif quadrant == 3:
+            x = -1
+            y = root.winfo_height() - height - 26
 
-    elif quadrant == 4:
-        x = root.winfo_width() - width - 1
-        y = root.winfo_height() - height - 26
+        elif quadrant == 4:
+            x = root.winfo_width() - width - 1
+            y = root.winfo_height() - height - 26
+
+    else:
+        x = old_x
+        y = old_y
 
     image_label.place(x=x, y=y)
 
 
-def update_info_image(info_path, quadrant=1):
+
+def update_info_image(info_path, quadrant=None):
+    old_x = image_label.winfo_x()
+    old_y = image_label.winfo_y()
     try:
         image_depth = Image.open(info_path).convert("RGB")
 
     except Exception as e:
-        print("Erro carregando:", info_path)
+        print("Error loading:", info_path)
         print(e)
         return
 
@@ -320,26 +320,42 @@ def update_info_image(info_path, quadrant=1):
     image_label.configure(image=tk_img)
     image_label.image = tk_img
 
-    # Mesmo posicionamento da update_image()
     if zoom == 1:
-        x = -1
-        y = -1
+        x = -2
+        y = -2
 
-    elif quadrant == 1:
-        x = -1
-        y = -1
+    elif quadrant is not None:
+        if quadrant == 1:
+            x = -2
+            y = -2
 
-    elif quadrant == 2:
-        x = root.winfo_width() - width - 1
-        y = -1
+        elif quadrant == 2:
+            x = root.winfo_width() - width - 2
+            y = -2
 
-    elif quadrant == 3:
-        x = -1
-        y = root.winfo_height() - height - 26
+        elif quadrant == 3:
+            x = -2
+            y = root.winfo_height() - height - 27
 
-    elif quadrant == 4:
-        x = root.winfo_width() - width - 1
-        y = root.winfo_height() - height - 26
+        elif quadrant == 4:
+            x = root.winfo_width() - width - 2
+            y = root.winfo_height() - height - 27
+
+    else:
+        x = old_x
+        y = old_y
+
+        screen_width = root.winfo_width()
+        screen_height = root.winfo_height() - 27
+
+        min_x = screen_width - width + 2
+        max_x = -2
+
+        min_y = screen_height - height + 4
+        max_y = -2
+
+        x = max(min_x, min(x, max_x))
+        y = max(min_y, min(y, max_y))
 
     image_label.place(x=x, y=y)
 
@@ -367,8 +383,6 @@ color_data = { # call color 20% S in HSV BB+BU+CO R -10% V in HSV
     "SB": ['#FFFFFF', '#cce7ff', '#0080ff', '#0060bf', '#004080', '#002040', '#ffff00'],
     "BB": ['#FFFFFF', '#ccffff', '#00e6e6', '#00a6a6', '#006666', '#002626', '#ffff00'],
 }
-
-# positions_offset = {'EP': (0, 0), 'MP': (344, 0), 'LJ': (688, 0), 'HJ': (1032, 0), 'CO': (0, 339), 'BU': (344, 339), 'SB': (688, 339), 'BB': (1032, 339)}
 
 positions_offset = {'EP': (0, 0), 'MP': (342, 0), 'LJ': (686, 0), 'HJ': (1030, 0), 'CO': (0, 339), 'BU': (342, 339), 'SB': (686, 339), 'BB': (1030, 339)}
 
@@ -408,7 +422,6 @@ jump_5_var = tk.StringVar(value="10")
 
 jumps_vars = [jump_1_var, jump_2_var, jump_3_var, jump_4_var, jump_5_var]
 
-
 image_label = tk.Label(root)
 image_label.place(x=-2, y=-2)
 
@@ -440,7 +453,6 @@ for a, (k, v) in enumerate(action_btn_dict.items()):
 
 prev = prev + spacing + gap + 140
 for i in range(len(jump_keys)):
-    # jump_entry_label = tk.Label(bottom_menu, bg=bottom_menu_background, justify="right", width=2, text=f"{jump_keys[i]}:").place(x=prev - 15 + (i * (gap + 42)), y=top_tab + 1)
     if jump_keys[i].lower() in ['y', 'p', 'j']:
         jump_entry_label = tk.Label(bottom_menu, bd=0, relief="flat", bg=bottom_menu_background, justify="right", text=f"{jump_keys[i]}:").place(x=prev - 14 + (i * (gap + 30)), y=top_tab + 2)
     else:
@@ -492,4 +504,3 @@ root.bind("<B1-Motion>", drag_image)
 root.bind("-", lambda event: toggle_info_image("adds/min.png", event))
 
 root.mainloop()
-
