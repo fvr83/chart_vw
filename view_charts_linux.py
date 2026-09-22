@@ -321,25 +321,25 @@ def update_info_image(info_path, quadrant=None):
     image_label.image = tk_img
 
     if zoom == 1:
-        x = -2
-        y = -2
+        x = -1
+        y = -1
 
     elif quadrant is not None:
         if quadrant == 1:
-            x = -2
-            y = -2
+            x = -1
+            y = -1
 
         elif quadrant == 2:
-            x = root.winfo_width() - width - 2
-            y = -2
+            x = root.winfo_width() - width - 1
+            y = -1
 
         elif quadrant == 3:
-            x = -2
-            y = root.winfo_height() - height - 27
+            x = -1
+            y = root.winfo_height() - height - 26
 
         elif quadrant == 4:
-            x = root.winfo_width() - width - 2
-            y = root.winfo_height() - height - 27
+            x = root.winfo_width() - width - 1
+            y = root.winfo_height() - height - 26
 
     else:
         x = old_x
@@ -349,10 +349,10 @@ def update_info_image(info_path, quadrant=None):
         screen_height = root.winfo_height() - 27
 
         min_x = screen_width - width + 2
-        max_x = -2
+        max_x = -1
 
         min_y = screen_height - height + 4
-        max_y = -2
+        max_y = -1
 
         x = max(min_x, min(x, max_x))
         y = max(min_y, min(y, max_y))
