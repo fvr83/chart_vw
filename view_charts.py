@@ -403,7 +403,6 @@ image_start_y = 0
 info_image = None
 
 jump_keys = ['y', 'u', 'i', 'o', 'p']
-jump_keys = [i.lower() for i in jump_keys]
 
 root = tk.Tk()
 root.title("XXXXXXXXX")
