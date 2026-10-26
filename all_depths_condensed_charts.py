@@ -187,17 +187,31 @@ for path_idx, path in enumerate(Path(origin_folder).iterdir()):
 
             actions_dict = data[1]
 
-            has_agg_ev = any(
-                v[1] > 0
-                for k, v in actions_dict.items()
-                if not k.startswith('F')
-            )
+            if hero_position == 'SB':
+                has_agg_ev = any(
+                    v[1] > 0
+                    for k, v in actions_dict.items()
+                    if not k.startswith('F') and not k.startswith('C')
+                )
+            else:
+                has_agg_ev = any(
+                    v[1] > 0
+                    for k, v in actions_dict.items()
+                    if not k.startswith('F')
+                )
 
-            has_agg_freq = any(
-                v[0] > 0
-                for k, v in actions_dict.items()
-                if not k.startswith('F')
-            )
+            if hero_position == 'SB':
+                has_agg_freq = any(
+                    v[0] > 0
+                    for k, v in actions_dict.items()
+                    if not k.startswith('F') and not k.startswith('C')
+                )
+            else:
+                has_agg_freq = any(
+                    v[0] > 0
+                    for k, v in actions_dict.items()
+                    if not k.startswith('F')
+                )
 
             if has_agg_ev:
                 depth_ev[depth_str][hero_position].add(combo)
