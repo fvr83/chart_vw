@@ -69,7 +69,6 @@ def draw_image(dictionary, title_string):
     draw.text((1, -1), title_string, fill='black', font=title_font)
     ts_width, ts_height = get_text_boundaries(title_string, title_font)
     sq_size = title_box_height - 5
-    print(f'{sq_size = }')
     text_spacing = 10
     text_width = get_text_boundaries('UTG', legend_font)[0]
     for i, (p, c) in enumerate(colors_dict.items()):
@@ -116,16 +115,18 @@ def draw_image(dictionary, title_string):
 # ------- MAIN LOOP -------
 # ==================================================
 origin_folder = Path('G0_T0_text_results')
-destination_folder = Path('img_results_test')
+destination_folder = Path('condensed_images_wide')
 
-depths = [
+all_depths = [
     '200bb', '160bb', '130bb', '100bb', '80bb', '70bb', '60bb', '55bb', '50bb', '45bb', '40bb', '38bb', '35bb', '32bb', '30bb', '28bb', '26bb', '25bb', '22bb', '20bb', '19bb', '17bb', '16bb', 
     '15bb', '14bb', '13bb', '12bb', '11bb', '10bb', '9bb', '8bb', '7bb', '6bb', '5bb', '4bb', '3bb', '2bb', '1bb'
 ]
 
 chosen_depths = [
-    '200bb', '160bb', '130bb', '100bb', '80bb', '70bb', '60bb', '55bb', '50bb', '45bb', '40bb', '38bb', '35bb', '32bb', '30bb', '28bb', '26bb', '25bb', '22bb', '20bb', '19bb', '17bb', '16bb', 
-    '15bb', '14bb', '13bb', '12bb', '11bb', '10bb', '9bb', '8bb', '7bb', '6bb', '5bb', '4bb', '3bb', '2bb'
+    # '200bb', '160bb', '130bb', 
+    '100bb', '80bb', '70bb', '60bb', '55bb', '50bb', '45bb', '40bb', '38bb', '35bb', '32bb', '30bb', '28bb', '26bb', '25bb', '22bb', '20bb', '19bb', '17bb', '16bb', 
+    '15bb', '14bb', '13bb', '12bb', '11bb', '10bb', 
+    # '9bb', '8bb', '7bb', '6bb', '5bb', '4bb', '3bb', '2bb'
 ]
 
 agg_condensed_ev = {}
@@ -189,13 +190,13 @@ for path_idx, path in enumerate(Path(origin_folder).iterdir()):
             has_agg_ev = any(
                 v[1] > 0
                 for k, v in actions_dict.items()
-                if k.startswith('R') or k.startswith('A')
+                if not k.startswith('F')
             )
 
             has_agg_freq = any(
                 v[0] > 0
                 for k, v in actions_dict.items()
-                if k.startswith('R') or k.startswith('A')
+                if not k.startswith('F')
             )
 
             if has_agg_ev:
@@ -229,11 +230,18 @@ for depth_str in chosen_depths:
 # print(f'{agg_condensed_freq = }')
 # print(f'{agg_any_freq = }')
 
+title_depths_str = 'ALL DEPTHS' if all(d in chosen_depths for d in all_depths) else f'{chosen_depths[0]} - {chosen_depths[-1]}'
+
 for dictionary, title_string in [
-    (agg_condensed_ev, 'ALL DEPTHS CONDENSED EV'),
-    (agg_any_ev, 'ALL DEPTHS EXTENDED EV'),
-    (agg_condensed_freq, 'ALL DEPTHS CONDENSED FREQUENCY'),
-    (agg_any_freq, 'ALL DEPTHS EXTENDED FREQUENCY'),
+    (agg_condensed_ev, f'{title_depths_str} CONDENSED EV'),
+    (agg_any_ev, f'{title_depths_str} EXTENDED EV'),
+    (agg_condensed_freq, f'{title_depths_str} CONDENSED FREQUENCY'),
+    (agg_any_freq, f'{title_depths_str} EXTENDED FREQUENCY'),
 ]:
     chart = draw_image(dictionary, title_string)
+    file_string = title_string.replace('- ', '')
+    file_name = '_'.join(file_string.split(' ')).lower() + '.png'
+    destination_folder.mkdir(parents=True, exist_ok=True)
+    final_path = Path(destination_folder, file_name)
+    chart.save(final_path)
     chart.show()

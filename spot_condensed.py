@@ -1,5 +1,6 @@
 import ast
 from pathlib import Path
+from PIL import Image, ImageDraw, ImageFont
 
 
 
@@ -45,6 +46,7 @@ matrix_size = 13
 ranks = "AKQJT98765432"
 
 combos_matrix = [[f"{r_1}{r_2}" if i == j else f"{r_1}{r_2}s" if i < j else f"{r_2}{r_1}o" for j, r_2 in enumerate(ranks)] for i, r_1 in enumerate(ranks)]
+combos_list = [f"{r_1}{r_2}" if i == j else f"{r_1}{r_2}s" if i < j else f"{r_2}{r_1}o" for i, r_1 in enumerate(ranks) for j, r_2 in enumerate(ranks)]
 
 
 
@@ -240,7 +242,6 @@ def normalize_float(value, decimals = 1):
 
 
 def get_condensed_range(hero: str, villain: str, spot_action: str, depths: list[int], raise_size='low'):
-    print('\n************** START <get_condensed_range> **************')
     temp_combos_dict = {}
     temp_actions_dict = {}
 
@@ -250,7 +251,6 @@ def get_condensed_range(hero: str, villain: str, spot_action: str, depths: list[
         spot_label = spot_action
 
     for depth in depths:
-        print(depth)
         actions_frequencies, combos_dict = get_info_from_spot(0, 0, 'MTT', 'ChipEV', depth, hero, spot_label, villain, 'actions_frequencies', 'combos_dict')
 
         for (spot_act, spot_act_frequency, spot_act_played_combos, _) in actions_frequencies:
@@ -289,656 +289,327 @@ def get_condensed_range(hero: str, villain: str, spot_action: str, depths: list[
             act_fr = in_v[0]
             act_ev = in_v[1]
             act_div = in_v[2]
-            condensed_combos_dict[k][in_k] = [normalize_float(act_fr/act_div), normalize_float(act_ev/act_div)]
-    print('************** END <get_condensed_range> **************')
+            condensed_combos_dict[k][in_k] = [normalize_float(act_fr/act_div), normalize_float(act_ev/act_div, 2)]
+
     return spot_label, condensed_actions_dict, condensed_combos_dict
 
 
+def sort_key(item: tuple[str, tuple[float, dict[str, list[float]]]], spot_actions_sort_list: list[str], vs: int):
+    combo, value_tuple = item
+
+    key = []
+
+    if not value_tuple:
+        key.extend((float("-inf"), float("-inf"), equity_vs[vs][combo]))
+        
+        return tuple(key)
+    
+    combo_actions_data = value_tuple
+
+    any_ev_max = float("-inf")
+    for action in spot_actions_sort_list:
+        frequency, ev = combo_actions_data[action]
+        if ev > any_ev_max:
+            any_ev_max = ev
+        key.extend((ev, frequency))
+    key.extend((equity_vs[vs][combo], ))
+    key.insert(0, any_ev_max)
+    
+    return tuple(key)
+
+
 def parse_condensed_data(condensed_actions_dict, condensed_combos_dict, hero: str, villain: str, spot_label: str, depths: list[int], print_info = False):
-    print('************** START <parse_condensed_data> **************')
     def_text_color = '#000000'
     alt_text_color = '#ffffff'
     action_ratio_bg_color = "#5f6661"
 
     alt_positions_list = ['LJ', 'SB']
+    villain_text_color = alt_text_color if (villain in alt_positions_list) and ('limp' not in spot_label) and ('_ai' not in spot_label) else def_text_color
+    villain_bg_color = color_data[villain][6] if '_ai' in spot_label else color_data[villain][2]
+    hero_text_color = alt_text_color if hero in alt_positions_list else def_text_color
+    hero_bg_color = color_data[hero][2]
 
     vs = vs_dict[hero] if spot_label.startswith('rfi') else 1
 
-    print(f'{condensed_actions_dict = }')
 
     spot_min_freq_action = min(v[0] for k, v in condensed_actions_dict.items() if k != 'Fold' and v[0] >= 0.5)
 
     most_frequent_actions = list(condensed_actions_dict.keys())
-    print(f'{most_frequent_actions = }')
-    action_chain_list = []
+    most_frequent_non_fold_actions = [a for a in most_frequent_actions if not a.startswith('F')]
+    title_spot_actions_colors_list = [[f'{depths[0]}-{depths[-1]}', def_text_color, alt_text_color], [f'{hero} {spot_label}', hero_text_color, hero_bg_color], [villain, villain_text_color, villain_bg_color], ['*', alt_text_color, def_text_color]]
     for k, v in condensed_actions_dict.items():
         if k.startswith('R') and hero in alt_positions_list:
             text_color = alt_text_color
+        else:
+            text_color = def_text_color
         color = color_data[hero][1] if k.startswith('C') else color_data[hero][2] if k.startswith('R') else color_data[hero][6] if k.startswith('A') else color_data[hero][0]
-        action_chain_list.append([k, v[0], round(v[0]/spot_min_freq_action)])
-    print(f'{action_chain_list = }')
+        title_spot_actions_colors_list.append([k, v[0], round(v[0]/spot_min_freq_action), text_color, color, action_ratio_bg_color])
 
-    
-    # title_spot_actions_colors_list = [f'{depths[0]}-{depths[-1]}', def_text_color, alt_text_color], actions_chain_list[0] + [def_text_color if hero_position not in alt_positions_list else alt_text_color] + [color_data[hero_position][2]]]
-    
-    # chain_list = [item for item in actions_chain_list if 'oR' not in item and 'vs' not in item]
-    # for item in chain_list:
-    #     pos = item[0]
-    #     act = item[1]
-    #     title_position_text_color = def_text_color if (pos not in alt_positions_list) or (act.startswith(('A', 'C'))) else alt_text_color
-    #     if act.startswith('R'):
-    #         raise_size, b_color = get_position_raise_size_and_color(pos, act, positions_actions)
-    #         if raise_size not in ['low', 'low-med']:
-    #             title_position_text_color = alt_text_color
-    #         title_spot_actions_colors_list.append([pos, act, title_position_text_color, b_color])
-    #         if pos != hero_position:
-    #             villain_position = pos
-    #             match spot_actions_label:
-    #                 case None:
-    #                     spot_actions_label = f'vs_rfi_{raise_size}'
-    #                 case 'limp':
-    #                     spot_actions_label = f'vs_raise_nai_{raise_size}'
-    #                 case a if 'r' in a:
-    #                     spot_actions_label = f'vs_3bet_nai_{raise_size}'
-    #                 case b if 'bet' in b:
-    #                     bet_num = int(spot_actions_label[spot_actions_label.index("obs") - 1])
-    #                     spot_actions_label = f'vs_{bet_num + 1}bet_nai_{raise_size}'
-    #         else:
-    #             spot_actions_label = f'rfi_{raise_size}'
-    #     elif act.startswith('A'):
-    #         title_position_text_color = def_text_color
-    #         title_spot_actions_colors_list.append([pos, act, title_position_text_color, color_data[pos][6]])
-    #         if pos != hero_position:
-    #             villain_position = pos
-    #             match spot_actions_label:
-    #                 case None:
-    #                     spot_actions_label = 'vs_open_shove'
-    #                 case 'limp':
-    #                     spot_actions_label = 'vs_raise_ai'
-    #                 case a if 'r' in a:
-    #                     spot_actions_label = 'vs_3bet_ai'
-    #                 case b if 'bet' in b:
-    #                     bet_num = int(spot_actions_label[spot_actions_label.index("bet") - 1])
-    #                     spot_actions_label = f'vs_{bet_num + 1}bet_ai'
-    #         else:
-    #             spot_actions_label = 'open_shove'
-    #     elif act.startswith('C'):
-    #         title_spot_actions_colors_list.append([pos, act, title_position_text_color, color_data[pos][1]])
-    #         if pos != hero_position:
-    #             villain_position = pos
-    #             spot_actions_label = 'vs_limp'
-    #         else:
-    #             spot_actions_label = 'limp'
-    # if not spot_actions_label:
-    #     spot_actions_label = 'rfi'
-    # if print_info: print(f'{spot_actions_label = }'); print(f'{villain_position = }')
+    sorted_combos = dict(sorted(condensed_combos_dict.items(), key=lambda item: sort_key(item, most_frequent_non_fold_actions, vs), reverse=True))
+    combos_order = list(sorted_combos.keys())
 
-    # spot_actions_taken_label = ""
-    # spot_string = ""
-    # raise_size = None
+    total_bars_to_paint = int(cell_inner_size / paint_bar_size)
+    share = 100 / total_bars_to_paint
+    combo_colors_info_dict = {}
+    prefolded_combos = combos_list.copy()
+    for combo, data in condensed_combos_dict.items():
+        if not data:
+           
+            continue
+        prefolded_combos.remove(combo)
+        combo_actions_data = data
+        temp_max_ev_found = 0
+        exclusive_shove = False
+        exclusive_fold_combos =[]
+
+        combo_most_frequent_actions = sorted(combo_actions_data, key=lambda action: combo_actions_data[action][0], reverse=True)
+        combo_most_frequent_non_fold_actions = sorted((action for action in combo_actions_data if action != "Fold"), key=lambda action: combo_actions_data[action][0], reverse=True)
+
+        colors_info = []
+        has_play_freq = False
+        has_ev = False
+        remaining_bars_to_paint = int(cell_inner_size / paint_bar_size)
+        for action in combo_most_frequent_actions:
+            freq = combo_actions_data[action][0]
+            ev = combo_actions_data[action][1]
+            if freq > 0:
+                if action.startswith("R"):
+                    if ev > 0: has_ev = True
+                    has_play_freq = True
+                    raise_idx = 0
+                    color = color_data[hero][2 + raise_idx]
+                    bars_to_paint = int((freq * total_bars_to_paint) / 100)
+                    remaining_bars_to_paint -= bars_to_paint
+                    spread = ((bars_to_paint + 1) * share) - freq
+                    colors_info.append([color, bars_to_paint, spread])
+                elif action.startswith("C"):
+                    if ev > 0: has_ev = True
+                    has_play_freq = True
+                    color = color_data[hero][1]
+                    bars_to_paint = int((freq * total_bars_to_paint) / 100)
+                    remaining_bars_to_paint -= bars_to_paint
+                    spread = ((bars_to_paint + 1) * share) - freq
+                    colors_info.append([color, bars_to_paint, spread])
+                elif action.startswith("A"):
+                    if freq == 100:
+                        exclusive_shove = True
+                    if ev > 0: has_ev = True
+                    has_play_freq = True
+                    color = color_data[hero][6]
+                    bars_to_paint = int((freq * total_bars_to_paint) / 100)
+                    remaining_bars_to_paint -= bars_to_paint
+                    spread = ((bars_to_paint + 1) * share) - freq
+                    colors_info.append([color, bars_to_paint, spread])
+                elif action.startswith("F"):
+                    if freq == 100:
+                        exclusive_fold_combos.append(combo)
+                    color = color_data[hero][0]
+                    bars_to_paint = int((freq * total_bars_to_paint) / 100)
+                    remaining_bars_to_paint -= bars_to_paint
+                    spread = ((bars_to_paint + 1) * share) - freq
+                    colors_info.append([color, bars_to_paint, spread])
+        while remaining_bars_to_paint:
+            choosed = min(colors_info, key=lambda x: x[2])
+            choosed[1] += 1
+            choosed[2] = 100
+            remaining_bars_to_paint -= 1
+
+        fold_tiles = 0
+        for color_paint_list in colors_info:
+            if color_paint_list[0] == "#FFFFFF":
+                fold_tiles = color_paint_list[1]
+                break
         
-    # for index, data in enumerate(spot_sequency.values()):
-        
-    #     for position, action in data.items():
-    #         if action == "spot":
-    #             if index == 0:
-    #                 action_string = f"{position} oR"
-    #                 spot_actions_taken_label = "raise-raise-low"
-    #                 spot_string += f"{action_string}"
-    #             else:
-    #                 action_string = f"{hero_position} vs"
-    #                 spot_string = f"{action_string}" + spot_string
-    #         else:
-    #             if action.startswith("R"):
-    #                 raise_size, _ = get_position_raise_size_and_color(position, action, positions_actions)
-    #                 spot_actions_taken_label += "raise-"
-    #                 position_actions_tuple = [next(t for t in positions_actions if t[0] == position)][0]
-    #                 actions_in_tuple = position_actions_tuple[3]
-    #                 position_raise_actions = []
-    #                 for act in actions_in_tuple:
-    #                     if act.startswith("R"):
-    #                         position_raise_actions.append(act)
-    #                 action_name_part, action_size_part = action.split(" ")
-    #                 raise_idx = position_raise_actions[::-1].index(action)
-    #                 action_string = f"{position_name_change[position]} {action_name_change[action_name_part]}{normalize_float(action_size_part)}"
-    #                 spot_string += f"_{action_string}"
-    #             elif action.startswith("C"):
-    #                 spot_actions_taken_label += "call-"
-    #                 action_string = f"{position_name_change[position]} {action_name_change[action]}"
-    #                 spot_string += f"_{action_string}"
-    #             elif action.startswith("A"):
-    #                 spot_actions_taken_label += "shove-"
-    #                 action_name_part, action_size_part = action.split(" ")
-    #                 action_string = f"{position_name_change[position]} {action_name_change[action_name_part]}"
-    #                 spot_string += f"_{action_string}"
-    # if not raise_size:
-    #     raise_size = "low"
-    # if len(spot_sequency) == 2:
-    #     spot_actions_taken_label = "raise-raise-" if spot_actions_taken_label == "raise-" else "raise-shove" if spot_actions_taken_label == "shove-" else "call-raise-"
-    #     spot_actions_taken_label = spot_actions_taken_label + raise_size if spot_actions_taken_label.endswith("raise-") else spot_actions_taken_label.rstrip("-")
-    # spot_actions_taken_label = spot_actions_taken_label + raise_size if spot_actions_taken_label.endswith("raise-") else spot_actions_taken_label.rstrip("-")
-    # if print_info: print(f'{spot_actions_taken_label = }'); print(f'{spot_string = }')
+        need_info = False
+        if has_play_freq and fold_tiles == total_bars_to_paint:
+            act = combo_most_frequent_non_fold_actions[0]
+            need_info = f"{act[0]}"
 
-    # title_spot_actions_colors_list.append(['*', alt_text_color, def_text_color])
-    # spot_min_freq_action = min(t[1] for t in actions_frequencies if t[0] != 'Fold' and t[1] >= 0.7)
+        colors_info = [ls for ls in colors_info if ls[1] > 0]
 
-    # spot_actions_frequencies = {}
-    # num_raise_actions = 0
-    # biggest_raise_frequency = 0
-    # most_frequent_raise_action = None
-    # spot_raise_frequency_sum = 0
-    # sorted_actions_frequencies = tuple(sorted(actions_frequencies, key=lambda x: x[1], reverse=True))
-    # if print_info: print(f'{sorted_actions_frequencies = }')
+        combo_colors_info_dict[combo] = colors_info, (need_info, has_play_freq, has_ev, exclusive_shove)
+    if exclusive_fold_combos:
+        folded_combos_order = [c for c in combos_order if c in prefolded_combos or c in exclusive_fold_combos]
+    else:
+        folded_combos_order = [c for c in combos_order if c in prefolded_combos]
+ 
+    return combo_colors_info_dict, title_spot_actions_colors_list, combos_order, folded_combos_order, hero, sorted_combos, prefolded_combos
 
-    # for action_tuple in sorted_actions_frequencies:
-    #     act = action_tuple[0]
-    #     freq = action_tuple[1]
-    #     spot_actions_frequencies[act] = freq
-    #     if act.startswith('R'):
-    #         spot_raise_frequency_sum += freq
-    #         num_raise_actions += 1
-    #         if freq > biggest_raise_frequency:
-    #             biggest_raise_frequency = freq
-    #             most_frequent_raise_action = act
-    #     spot_action_ratio = round(freq / spot_min_freq_action)
-    #     title_position_text_color = def_text_color if (hero_position not in alt_positions_list) or (act.startswith(('A', 'C'))) else alt_text_color
-    #     if normalize_float(freq) > 0:
-    #         if act.startswith('R'):
-    #             raise_size, color = get_spot_raise_size_and_color(hero_position, act, actions_frequencies)
-    #             if raise_size not in ['low', 'low-med']:
-    #                 title_position_text_color = alt_text_color
-    #             title_spot_actions_colors_list.append([act, freq, title_position_text_color, color, spot_action_ratio, alt_text_color, action_ratio_bg_color])
-    #         elif act.startswith('C'):
-    #             title_spot_actions_colors_list.append([act, freq, title_position_text_color, color_data[hero_position][1], spot_action_ratio, alt_text_color, action_ratio_bg_color])
-    #         elif act.startswith('A'):
-    #             title_spot_actions_colors_list.append([act, freq, title_position_text_color, color_data[hero_position][6], spot_action_ratio, alt_text_color, action_ratio_bg_color])
-    #         elif act.startswith('F'):
-    #             title_spot_actions_colors_list.append([act, freq, '#000000', color_data[hero_position][0], spot_action_ratio, alt_text_color, action_ratio_bg_color])
+
+def draw_red_black_line(x: int, y: int, img: Image):
+    draw = ImageDraw.Draw(img)
+    for i in range(24):
+        if i % 2 == 0:
+            draw.point((x, y + i), "#ff0000")
+        else:
+            draw.point((x, y + i), "#000000")
+
+
+def draw_yellow_black_line(x: int, y: int, img: Image):
+    draw = ImageDraw.Draw(img)
+    for i in range(24):
+        if i % 2 == 0:
+            draw.point((x, y + i), "#ffff00")
+        else:
+            draw.point((x, y + i), "#000000")
+
+
+def get_text_boundaries(text: str, font: tuple) -> tuple[int]:
+    text_len = len(text)
+    img_size = text_len * 11
+    img = Image.new("RGB", (img_size, int(img_size / 3)), "#ffffff")
+    draw = ImageDraw.Draw(img)
+    bbox = draw.textbbox((0, 0), text, font=font)
+    width = bbox[2] - bbox[0]
+    height = bbox[3] - bbox[1]
+
+    return width, height
+
+
+def draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_order, folded_combos_order, hero, sorted_combos, prefolded_combos, draw_mode = 'ranking'):
+    separator_color = '#0000ff'
+    title_bar_height = 11
+
+    chart_width = (cell_size * matrix_size)
+    chart_height = chart_width + title_bar_height
+
+    chart = Image.new("RGB", (chart_width + 1, chart_height + 1), "#ffffff")
+    draw = ImageDraw.Draw(chart)
+
+    title_font = ImageFont.truetype("ROBOTOCONDENSED-SEMIBOLD.ttf", size=11)
+    title_font_2 = ImageFont.truetype("ROBOTOCONDENSED-SEMIBOLD.ttf", size=10)
+    matrix_font = ImageFont.truetype("ROBOTOCONDENSED-BLACK.ttf", size=14)
+    idx_font = ImageFont.truetype("ROBOTOCONDENSED-SEMIBOLD.ttf", size=8)
+    sec_font = ImageFont.truetype("ROBOTOCONDENSED-SEMIBOLD.ttf", size=7)
+
+    x = 0
+    y = 0
     
-    # later_positions = positions_list[positions_list.index(hero_position) + 1:]
-    # earlier_positions = [p for v in spot_sequency.values() for p in v.keys() if positions_list.index(p) < positions_list.index(hero_position)]
+    t_x_i = 1
+    t_y_i = -1
+    t_y_off = 2
 
-    # earlier_positions_fold_equity_after_raise = {}
-    # earlier_positions_fold_equity_after_shove = {}
-    # later_positions_fold_equity_after_raise = {}
-    # later_positions_fold_equity_after_shove = {}
-    # earlier_positions_raise_after_raise = {}
-    # earlier_positions_shove_after_raise = {}
-    # later_positions_raise_after_raise = {}
-    # later_positions_shove_after_raise = {}
-    # later_positions_raise_after_call = {}
-    # later_positions_shove_after_call = {}
+    cut_part = ['*', '#ffffff', '#000000']
+    cut_index = title_spot_actions_colors_list.index(cut_part)
+    before = title_spot_actions_colors_list[:cut_index]
+    after = title_spot_actions_colors_list[cut_index + 1:]
 
-    # res_earlier_positions_fold_equity_after_raise = 0
-    # res_earlier_positions_fold_equity_after_shove = 0
-    # res_later_positions_fold_equity_after_raise = 0
-    # res_later_positions_fold_equity_after_shove = 0
-    # res_earlier_positions_raise_after_raise = 0
-    # res_earlier_positions_shove_after_raise = 0
-    # res_later_positions_raise_after_raise = 0
-    # res_later_positions_shove_after_raise = 0
-    # res_later_positions_raise_after_call = 0
-    # res_later_positions_shove_after_call = 0
+    for ls_before in before:
+        text = ls_before[0]
+        if '_' in text:
+            text = text.replace('_', '-')
+        text_color = ls_before[1]
+        bg_color = ls_before[2]
+        text_width, text_height = get_text_boundaries(text, title_font)
+        draw.rectangle((t_x_i, t_y_i + t_y_off, t_x_i + text_width - 1, t_y_i + t_y_off + text_height + 1), fill=bg_color, outline=None)
+        draw.text((t_x_i, t_y_i), text, font=title_font, fill=text_color)
+        t_x_i += text_width + 1
 
-    # fe_dictionaries = {
-    #     'earlier_positions_fold_equity_after_raise': earlier_positions_fold_equity_after_raise, 'earlier_positions_fold_equity_after_shove': earlier_positions_fold_equity_after_shove, 
-    #     'later_positions_fold_equity_after_raise': later_positions_fold_equity_after_raise, 'later_positions_fold_equity_after_shove': later_positions_fold_equity_after_shove, 
-    #     'earlier_positions_raise_after_raise': earlier_positions_raise_after_raise, 'earlier_positions_shove_after_raise': earlier_positions_shove_after_raise, 
-    #     'later_positions_raise_after_raise': later_positions_raise_after_raise, 'later_positions_shove_after_raise': later_positions_shove_after_raise, 
-    #     'later_positions_raise_after_call': later_positions_raise_after_call, 'later_positions_shove_after_call': later_positions_shove_after_call
-    # }
+    text = cut_part[0]
+    text_color = cut_part[1]
+    bg_color = cut_part[2]
+    text_width, text_height = get_text_boundaries(text, title_font)
+    draw.rectangle((t_x_i, t_y_i + t_y_off, t_x_i + text_width - 1, t_y_i + t_y_off + text_height + 1), fill=bg_color, outline=None)
+    draw.text((t_x_i, t_y_i), text, font=title_font, fill=text_color)
+    t_x_i += text_width + 1
 
-    # if spot_actions_label.startswith('rfi'):
-    #     if hero_position != 'SB':
-    #         hero_relevant_actions = [action for action in hero_avaliable_actions if not action.startswith('F') and not action.startswith('C')]
-    #     else:
-    #         hero_relevant_actions = [action for action in hero_avaliable_actions if not action.startswith('F')]
-    #     for action in hero_relevant_actions:
-    #         if action.startswith('R'):
-    #             raise_size, _ = get_spot_raise_size_and_color(hero_position, action, actions_frequencies)
-    #             for lt_pos in later_positions:
-    #                 try:
-    #                     lt_pos_act_feq = get_info_from_spot(0, 0, 'MTT', 'ChipEV', depth, lt_pos, f'vs_rfi_{raise_size}', hero_position, 'actions_frequencies')[0]
-    #                 except:
-    #                     print("FAILURE!!! <lt_pos_act_feq = get_info_from_spot> failed for", depth, lt_pos, f'vs_rfi_{raise_size}','HERO >>' , hero_position)
+    for i, ls_after in enumerate(after):
+        action = ls_after[0][0]
+        action_width, action_height = get_text_boundaries(action, title_font)
+        frequency = str(normalize_float(ls_after[1]))
+        frequency_width, frequency_height = get_text_boundaries(frequency, title_font)
+        text_color = ls_after[3]
+        bg_color = ls_after[4]
+        ratio = str(ls_after[2])
+        ratio_width, ratio_height = get_text_boundaries(ratio, title_font)
+        white_color = '#ffffff'
+        gray_color = ls_after[5]
+   
+        draw.rectangle((t_x_i, t_y_i + t_y_off, t_x_i, t_y_i + t_y_off + action_height + 1), fill=separator_color, outline=None)
+        t_x_i += 1
+        draw.rectangle((t_x_i, t_y_i + t_y_off, t_x_i + action_width - 1, t_y_i + t_y_off + action_height + 1), fill=bg_color, outline=None)
+        draw.text((t_x_i, t_y_i), action, font=title_font, fill=text_color)
+        t_x_i += action_width
+        draw.rectangle((t_x_i, t_y_i + t_y_off, t_x_i + frequency_width - 1, t_y_i + t_y_off + frequency_height + 1), fill=gray_color, outline=None)
+        draw.text((t_x_i, t_y_i), frequency, font=title_font, fill=white_color)
+        t_x_i += frequency_width
+        draw.rectangle((t_x_i, t_y_i + t_y_off, t_x_i + ratio_width - 1, t_y_i + t_y_off + ratio_height + 1), fill=bg_color, outline=None)
+        draw.text((t_x_i, t_y_i), ratio, font=title_font, fill=text_color)
+        t_x_i += ratio_width
+        draw.rectangle((t_x_i, t_y_i + t_y_off, t_x_i, t_y_i + t_y_off + action_height + 1), fill=separator_color, outline=None)
+        t_x_i += 1
 
-    #                     continue
-    #                 for act_tuple in lt_pos_act_feq:
-    #                     _act, _freq, _, _ = act_tuple
-    #                     if _act.startswith('R') and _freq > 0:
-    #                         later_positions_raise_after_raise.setdefault(action, {})
-    #                         later_positions_raise_after_raise[action].setdefault(lt_pos, 0)
-    #                         later_positions_raise_after_raise[action][lt_pos] += _freq
-    #                     elif _act.startswith('A') and _freq > 0:
-    #                         later_positions_shove_after_raise.setdefault(action, {})
-    #                         later_positions_shove_after_raise[action].setdefault(lt_pos, 0)
-    #                         later_positions_shove_after_raise[action][lt_pos] += _freq
-    #                     elif _act.startswith('F') and _freq > 0:
-    #                         later_positions_fold_equity_after_raise.setdefault(action, {})
-    #                         later_positions_fold_equity_after_raise[action].setdefault(lt_pos, 0)
-    #                         later_positions_fold_equity_after_raise[action][lt_pos] += _freq
-    #         elif action.startswith('C'):
-    #             for lt_pos in later_positions:
-    #                 try:
-    #                     lt_pos_act_feq = get_info_from_spot(0, 0, 'MTT', 'ChipEV', depth, lt_pos, f'vs_limp', hero_position, 'actions_frequencies')[0]
-    #                 except:
-    #                     print("FAILURE!!! <lt_pos_act_feq = get_info_from_spot> failed for", depth, lt_pos, f'vs_limp','HERO >>' , hero_position)
+    draw.rectangle((x, y, chart_width, title_bar_height), outline="#000000")
 
-    #                     continue
-    #                 for act_tuple in lt_pos_act_feq:
-    #                     _act, _freq, _, _ = act_tuple
-    #                     if _act.startswith('R') and _freq > 0:
-    #                         later_positions_raise_after_call.setdefault(lt_pos, 0)
-    #                         later_positions_raise_after_call[lt_pos] += _freq
-    #                     elif _act.startswith('A') and _freq > 0:
-    #                         later_positions_shove_after_call.setdefault(lt_pos, 0)
-    #                         later_positions_shove_after_call[lt_pos] += _freq
-    #         elif action.startswith('A'):
-    #             for lt_pos in later_positions:
-    #                 try:
-    #                     lt_pos_act_feq = get_info_from_spot(0, 0, 'MTT', 'ChipEV', depth, lt_pos, 'vs_open_shove', hero_position, 'actions_frequencies')[0]
-    #                 except:
-    #                     print("FAILURE!!! <lt_pos_act_feq = get_info_from_spot> failed for", depth, lt_pos, 'vs_open_shove','HERO >>' , hero_position)
+    for row in range(matrix_size):
+        for col in range(matrix_size):
+            x_1 = (cell_size * col)
+            y_1 = title_bar_height + (cell_size * row)
+            x_2 = x_1 + cell_size
+            y_2 = y_1 + cell_size
 
-    #                     continue
-    #                 for act_tuple in lt_pos_act_feq:
-    #                     _act, _freq, _, _ = act_tuple
-    #                     if _act.startswith('F') and _freq > 0:
-    #                         later_positions_fold_equity_after_shove.setdefault(lt_pos, 0)
-    #                         later_positions_fold_equity_after_shove[lt_pos] += _freq
-    # elif spot_actions_label.startswith('vs_limp') and hero_position == 'BB':
-    #     hero_relevant_actions = [action for action in hero_avaliable_actions if not action.startswith('F') and not action.startswith('C')]
-    #     for action in hero_relevant_actions:
-    #         if action.startswith('R'):
-    #             raise_size, _ = get_spot_raise_size_and_color(hero_position, action, actions_frequencies)
-    #             for er_pos in earlier_positions:
-    #                 try:
-    #                     er_pos_act_feq = get_info_from_spot(0, 0, 'MTT', 'ChipEV', depth, er_pos, f'vs_raise_nai_{raise_size}', hero_position, 'actions_frequencies')[0]
-    #                 except:
-    #                     print("FAILURE!!! <er_pos_act_feq = get_info_from_spot> failed for", depth, er_pos, f'vs_raise_nai_{raise_size}','HERO >>' , hero_position)
+            combo = combos_matrix[row][col]
+            x_i = x_1
+            need_info, has_play_freq, has_ev = None, False, False
+            try:
+                colors_parts = combo_colors_info_dict[combo]
+                for part in colors_parts:
+                    if isinstance(part, list):
+                        for i, part_rgb in enumerate(part):
+                            color = part_rgb[0]
+                            pixels_to_paint = part_rgb[1] * paint_bar_size
+                            draw.rectangle((x_i + 1, y_1, x_i + pixels_to_paint, y_2), fill=color, outline=None)
+                            colors_sequency_size = len(colors_parts[0])
+                            if color == "#FFFFFF":
+                                if i == 0 and colors_sequency_size > 1:
+                                    draw_red_black_line(x_i + pixels_to_paint, y_1 + 1, chart)
+                                if i == colors_sequency_size - 1 and colors_sequency_size > 1:
+                                    draw_yellow_black_line(x_i + 1, y_1 + 1, chart)
+                                if 0 < i < colors_sequency_size - 1:
+                                    draw_red_black_line(x_i + pixels_to_paint, y_1 + 1, chart)
+                                    draw_yellow_black_line(x_i + 1, y_1 + 1, chart)
+                            x_i += pixels_to_paint
 
-    #                     continue
-    #                 for act_tuple in er_pos_act_feq:
-    #                     _act, _freq, _, _ = act_tuple
-    #                     if _act.startswith('R') and _freq > 0:
-    #                         earlier_positions_raise_after_raise.setdefault(action, {})
-    #                         earlier_positions_raise_after_raise[action].setdefault(er_pos, 0)
-    #                         earlier_positions_raise_after_raise[action][er_pos] += _freq
-    #                     elif _act.startswith('A') and _freq > 0:
-    #                         earlier_positions_shove_after_raise.setdefault(action, {})
-    #                         earlier_positions_shove_after_raise[action].setdefault(er_pos, 0)
-    #                         earlier_positions_shove_after_raise[action][er_pos] += _freq
-    #                     elif _act.startswith('F') and _freq > 0:
-    #                         earlier_positions_fold_equity_after_raise.setdefault(action, {})
-    #                         earlier_positions_fold_equity_after_raise[action].setdefault(er_pos, 0)
-    #                         earlier_positions_fold_equity_after_raise[action][er_pos] += _freq
-    #         elif action.startswith('A'):
-    #             for er_pos in earlier_positions:
-    #                 try:
-    #                     er_pos_act_feq = get_info_from_spot(0, 0, 'MTT', 'ChipEV', depth, er_pos, 'vs_raise_ai', hero_position, 'actions_frequencies')[0]
-    #                 except:
-    #                     print("FAILURE!!! <er_pos_act_feq = get_info_from_spot> failed for", depth, er_pos, 'vs_raise_ai','HERO >>' , hero_position)
-
-    #                     continue
-    #                 for act_tuple in er_pos_act_feq:
-    #                     _act, _freq, _, _ = act_tuple
-    #                     if _act.startswith('F') and _freq > 0:
-    #                         earlier_positions_fold_equity_after_shove.setdefault(er_pos, 0)
-    #                         earlier_positions_fold_equity_after_shove[er_pos] += _freq
-    # elif spot_actions_label.startswith('vs_rfi'):
-    #     hero_relevant_actions = [action for action in hero_avaliable_actions if not action.startswith('F')]
-    #     for action in hero_relevant_actions:
-    #         if action.startswith('R'):
-    #             raise_size, _ = get_spot_raise_size_and_color(hero_position, action, actions_frequencies)
-    #             for er_pos in earlier_positions:
-    #                 try:
-    #                     er_pos_act_feq = get_info_from_spot(0, 0, 'MTT', 'ChipEV', depth, er_pos, f'vs_3bet_nai_{raise_size}', hero_position, 'actions_frequencies')[0]
-    #                 except:
-    #                     print("FAILURE!!! <er_pos_act_feq = get_info_from_spot> failed for", depth, er_pos, f'vs_3bet_nai_{raise_size}','HERO >>' , hero_position)
-
-    #                     continue
-    #                 for act_tuple in er_pos_act_feq:
-    #                     _act, _freq, _, _ = act_tuple
-    #                     if _act.startswith('R') and _freq > 0:
-    #                         earlier_positions_raise_after_raise.setdefault(action, {})
-    #                         earlier_positions_raise_after_raise[action].setdefault(er_pos, 0)
-    #                         earlier_positions_raise_after_raise[action][er_pos] += _freq
-    #                     elif _act.startswith('A') and _freq > 0:
-    #                         earlier_positions_shove_after_raise.setdefault(action, {})
-    #                         earlier_positions_shove_after_raise[action].setdefault(er_pos, 0)
-    #                         earlier_positions_shove_after_raise[action][er_pos] += _freq
-    #                     elif _act.startswith('F') and _freq > 0:
-    #                         earlier_positions_fold_equity_after_raise.setdefault(action, {})
-    #                         earlier_positions_fold_equity_after_raise[action].setdefault(er_pos, 0)
-    #                         earlier_positions_fold_equity_after_raise[action][er_pos] += _freq
-    #         elif action.startswith('A'):
-    #             for er_pos in earlier_positions:
-    #                 try:
-    #                     er_pos_act_feq = get_info_from_spot(0, 0, 'MTT', 'ChipEV', depth, er_pos, 'vs_3bet_ai', hero_position, 'actions_frequencies')[0]
-    #                 except:
-    #                     print("FAILURE!!! <er_pos_act_feq = get_info_from_spot> failed for", depth, er_pos, 'vs_3bet_ai','HERO >>' , hero_position)
-
-    #                     continue
-    #                 for act_tuple in er_pos_act_feq:
-    #                     _act, _freq, _, _ = act_tuple
-    #                     if _act.startswith('F') and _freq > 0:
-    #                         earlier_positions_fold_equity_after_shove.setdefault(er_pos, 0)
-    #                         earlier_positions_fold_equity_after_shove[er_pos] += _freq
-    
-    # for k, v in fe_dictionaries.items():
-    #     if not v:
-
-    #         continue
-    #     # print(f'{k} = {v}')
-    #     match k:
-    #         case 'earlier_positions_fold_equity_after_raise':
-    #             res_earlier_positions_fold_equity_after_raise = calculate_average(v, 'cumulative')
-    #         case 'earlier_positions_fold_equity_after_shove':
-    #             res_earlier_positions_fold_equity_after_shove = calculate_average(v, 'cumulative')
-    #         case 'later_positions_fold_equity_after_raise':
-    #             res_later_positions_fold_equity_after_raise = calculate_average(v, 'cumulative')
-    #         case 'later_positions_fold_equity_after_shove':
-    #             res_later_positions_fold_equity_after_shove = calculate_average(v, 'cumulative')
-    #         case 'earlier_positions_raise_after_raise':
-    #             res_earlier_positions_raise_after_raise = calculate_average(v, 'alternative')
-    #         case 'earlier_positions_shove_after_raise':
-    #             res_earlier_positions_shove_after_raise = calculate_average(v, 'alternative')
-    #         case 'later_positions_raise_after_raise':
-    #             res_later_positions_raise_after_raise = calculate_average(v, 'alternative')
-    #         case 'later_positions_shove_after_raise':
-    #             res_later_positions_shove_after_raise = calculate_average(v, 'alternative')
-    #         case 'later_positions_raise_after_call':
-    #             res_later_positions_raise_after_call = calculate_average(v, 'alternative')
-    #         case 'later_positions_shove_after_call':
-    #             res_later_positions_shove_after_call = calculate_average(v, 'alternative')
-
-    
-    # fe_variables = {
-    #     'res_earlier_positions_fold_equity_after_raise': res_earlier_positions_fold_equity_after_raise, 'res_earlier_positions_fold_equity_after_shove': res_earlier_positions_fold_equity_after_shove, 
-    #     'res_later_positions_fold_equity_after_raise': res_later_positions_fold_equity_after_raise, 'res_later_positions_fold_equity_after_shove': res_later_positions_fold_equity_after_shove, 
-    #     'res_earlier_positions_raise_after_raise': res_earlier_positions_raise_after_raise, 'res_earlier_positions_shove_after_raise': res_earlier_positions_shove_after_raise, 
-    #     'res_later_positions_raise_after_raise': res_later_positions_raise_after_raise, 'res_later_positions_shove_after_raise': res_later_positions_shove_after_raise, 
-    #     'res_later_positions_raise_after_call': res_later_positions_raise_after_call, 'res_later_positions_shove_after_call': res_later_positions_shove_after_call
-    # }
-
-    # for k, v in fe_variables.items():
-    #     if v == 0:
-
-    #         continue
-
-    #     match k:
-    #         case 'res_earlier_positions_fold_equity_after_raise':
-    #             for k, v in res_earlier_positions_fold_equity_after_raise.items():
-    #                 for ls in title_spot_actions_colors_list:
-    #                     if k in ls:
-    #                         if not isinstance(ls[-1], list):
-    #                             ls.append([])
-    #                         ls[-1].append(f'e_f_e:{v}')
-    #         case 'res_earlier_positions_fold_equity_after_shove':
-    #             for ls in title_spot_actions_colors_list:
-    #                 if isinstance(ls[0], str):
-    #                     if 'Allin' in ls[0]:
-    #                         if not isinstance(ls[-1], list):
-    #                             ls.append([])
-    #                         ls[-1].append(f'e_f_e:{res_earlier_positions_fold_equity_after_shove}')
-    #         case 'res_later_positions_fold_equity_after_raise':
-    #             for k, v in res_later_positions_fold_equity_after_raise.items():
-    #                 for ls in title_spot_actions_colors_list:
-    #                     if k in ls:
-    #                         if not isinstance(ls[-1], list):
-    #                             ls.append([])
-    #                         ls[-1].append(f'l_f_e:{v}')
-    #         case 'res_later_positions_fold_equity_after_shove':
-    #             for ls in title_spot_actions_colors_list:
-    #                 if isinstance(ls[0], str):
-    #                     if 'Allin' in ls[0]:
-    #                         if not isinstance(ls[-1], list):
-    #                             ls.append([])
-    #                         ls[-1].append(f'l_f_e:{res_later_positions_fold_equity_after_shove}')
-    #         case 'res_earlier_positions_raise_after_raise':
-    #             for k, v in res_earlier_positions_raise_after_raise.items():
-    #                 for ls in title_spot_actions_colors_list:
-    #                     if k in ls:
-    #                         if not isinstance(ls[-1], list):
-    #                             ls.append([])
-    #                         ls[-1].append(f'e_r_r:{v}')
-    #         case 'res_earlier_positions_shove_after_raise':
-    #             for k, v in res_earlier_positions_shove_after_raise.items():
-    #                 for ls in title_spot_actions_colors_list:
-    #                     if k in ls:
-    #                         if not isinstance(ls[-1], list):
-    #                             ls.append([])
-    #                         ls[-1].append(f'e_s_r:{v}')
-    #         case 'res_later_positions_raise_after_raise':
-    #             for k, v in res_later_positions_raise_after_raise.items():
-    #                 for ls in title_spot_actions_colors_list:
-    #                     if k in ls:
-    #                         if not isinstance(ls[-1], list):
-    #                             ls.append([])
-    #                         ls[-1].append(f'l_r_r:{v}')
-    #         case 'res_later_positions_shove_after_raise':
-    #             for k, v in res_later_positions_shove_after_raise.items():
-    #                 for ls in title_spot_actions_colors_list:
-    #                     if k in ls:
-    #                         if not isinstance(ls[-1], list):
-    #                             ls.append([])
-    #                         ls[-1].append(f'l_s_r:{v}')
-    #         case 'res_later_positions_raise_after_call':
-    #             for ls in title_spot_actions_colors_list:
-    #                 if isinstance(ls[0], str):
-    #                     if ls[0].startswith('C'):
-    #                         if not isinstance(ls[-1], list):
-    #                             ls.append([])
-    #                         ls[-1].append(f'l_r_c:{res_later_positions_raise_after_call}')
-    #         case 'res_later_positions_shove_after_call':
-    #             for ls in title_spot_actions_colors_list:
-    #                 if isinstance(ls[0], str):
-    #                     if ls[0].startswith('C'):
-    #                         if not isinstance(ls[-1], list):
-    #                             ls.append([])
-    #                         ls[-1].append(f'l_s_c:{res_later_positions_shove_after_call}')
-    # if print_info: print(f'{title_spot_actions_colors_list = }')
-
-    # spot_most_frequent_actions = dict(sorted(spot_actions_frequencies.items(), key=lambda item: item[1], reverse=True))
-    # if print_info: print(f'{spot_most_frequent_actions = }')
-
-    # condensed_spot_most_frequent_actions = {}
-    # adjusted_spot_most_frequent_actions = {}
-    # sorted_raise_actions = None
-
-    # if num_raise_actions > 1:
-    #     sorted_raise_actions = dict(sorted(((k, v) for k, v in spot_actions_frequencies.items() if k.startswith('R')),key=lambda item: item[1], reverse=True))
-    #     for k, v in spot_actions_frequencies.items():
-    #         if not k.startswith('R'):
-    #             condensed_spot_most_frequent_actions[k] = v
-    #     condensed_spot_most_frequent_actions[most_frequent_raise_action] = spot_raise_frequency_sum
-    #     condensed_spot_most_frequent_actions = dict(sorted(condensed_spot_most_frequent_actions.items(), key=lambda item: item[1], reverse=True))
-    #     for ac, fr in condensed_spot_most_frequent_actions.items():
-    #         if not ac.startswith('R'):
-    #             adjusted_spot_most_frequent_actions[ac] = fr
-    #         else:
-    #             for foo, bar in sorted_raise_actions.items():
-    #                 adjusted_spot_most_frequent_actions[foo] = bar
-
-    # else:
-    #     adjusted_spot_most_frequent_actions = dict(sorted(condensed_spot_most_frequent_actions.items(), key=lambda item: item[1], reverse=True))
-    # if print_info: print(f'{condensed_spot_most_frequent_actions = }')
-    # if print_info: print(f'{adjusted_spot_most_frequent_actions = }')
-
-    # sorted_raise_actions_list = []
-    # if sorted_raise_actions:
-    #     sorted_raise_actions_list = list(sorted_raise_actions.keys())
-    #     if print_info: print(f'{sorted_raise_actions_list = }')
-
-    # condensed_spot_most_frequent_actions_list = list(condensed_spot_most_frequent_actions.keys())
-    # condensed_spot_most_frequent_non_fold_actions_list = [a for a in condensed_spot_most_frequent_actions_list if not a.startswith('F')]
-    # if print_info: print(f'{condensed_spot_most_frequent_non_fold_actions_list = }')
-
-    # spot_actions_sort_list = list(adjusted_spot_most_frequent_actions.keys())
-    # if not spot_actions_sort_list:
-    #     spot_actions_sort_list = [a for a in spot_most_frequent_actions.keys() if a != 'Fold']
-    # if print_info: print(f'{spot_actions_sort_list = }')
-    
-    # sorted_combos = dict(sorted(combos_dict.items(), key=lambda item: sort_key(item, spot_actions_sort_list, vs), reverse=True))
-    # combos_order = list(sorted_combos.keys())
-    # if print_info: print(f'{combos_order = }')
-
-    # spot_combo_with_max_ev = None
-    # spot_max_ev = 0
-    # spot_total_ev = 0
-    # spot_combos_with_ev = []
-
-    # exclusive_fold_combos = {}
-    # combos_with_partial_fold_frequency = {}
-    # exclusive_call_combos = {}
-    # combos_with_partial_call_frequency = {}
-    # exclusive_shove_combos = {}
-    # combos_with_partial_shove_frequency = {}
-    # exclusive_raise_combos = {}
-    # combos_with_partial_raise_frequency = {}
-
-    # total_bars_to_paint = int(cell_inner_size / paint_bar_size)
-    # share = 100 / total_bars_to_paint
-    # combo_colors_info_dict = {}
-
-    # for combo, data in combos_dict.items():
-    #     if not data:
-    #         if not combo in prefolded_combos:
-    #             print("COMBO NOT PREFOLDED WITH NO DATA:", depth, hero_position, spot_actions_label, villain_position, combo)
-
-    #         continue
-    #     temp_max_ev_label, combo_actions_data = data
-    #     temp_max_ev_found = 0
-    #     exclusive_shove = False
-
-    #     for action, (frequency, ev) in combo_actions_data.items():
-    #         temp_max_ev_found = ev if temp_max_ev_found < ev else temp_max_ev_found
-    #         if action.startswith('F'):
-    #             if frequency > 0:
-    #                 if frequency == 100:
-    #                     exclusive_fold_combos.setdefault(action, {})
-    #                     exclusive_fold_combos[action][combo] = [frequency, ev]
-    #                 else:
-    #                     combos_with_partial_fold_frequency.setdefault(action, {})
-    #                     combos_with_partial_fold_frequency[action][combo] = [frequency, ev]
-    #         elif action.startswith('C'):
-    #             if frequency > 0:
-    #                 if frequency == 100:
-    #                     exclusive_call_combos.setdefault(action, {})
-    #                     exclusive_call_combos[action][combo] = [frequency, ev]
-    #                 else:
-    #                     combos_with_partial_call_frequency.setdefault(action, {})
-    #                     combos_with_partial_call_frequency[action][combo] = [frequency, ev]
-    #         elif action.startswith('A'):
-    #             if frequency > 0:
-    #                 if frequency == 100:
-    #                     exclusive_shove = True
-    #                     exclusive_shove_combos.setdefault(action, {})
-    #                     exclusive_shove_combos[action][combo] = [frequency, ev]
-    #                 else:
-    #                     combos_with_partial_shove_frequency.setdefault(action, {})
-    #                     combos_with_partial_shove_frequency[action][combo] = [frequency, ev]
-    #         elif action.startswith('R'):
-    #             if frequency > 0:
-    #                 if frequency == 100:
-    #                     exclusive_raise_combos.setdefault(action, {})
-    #                     exclusive_raise_combos[action][combo] = [frequency, ev]
-    #                 else:
-    #                     combos_with_partial_raise_frequency.setdefault(action, {})
-    #                     combos_with_partial_raise_frequency[action][combo] = [frequency, ev]
+                    elif isinstance(part, tuple):
+                        need_info = part[0]
+                        has_play_freq = part[1]
+                        has_ev = part[2]
+                        exclusive_shove = part[3]
+            except:
+                pass
             
-    #     if temp_max_ev_found != temp_max_ev_label:
-    #         print("COMBO MAX EV DIVERGENCE:", depth, hero_position, spot_actions_label, villain_position, combo, temp_max_ev_label, temp_max_ev_found)
+            combo_text_color = "#000000" if has_ev else "#737373" if has_play_freq else "#d9d9d9"
 
-    #     combo_ev_max = max(temp_max_ev_found, temp_max_ev_label)
+            draw.rectangle((x_1, y_1, x_2, y_2), outline="#000000")
 
-    #     if combo_ev_max > 0:
-    #         spot_total_ev += combo_ev_max
-    #         spot_combos_with_ev.append(combo)
-    #         if combo_ev_max > spot_max_ev:
-    #             spot_max_ev = combo_ev_max
-    #             spot_combo_with_max_ev = combo
+            xs_offsets = ((-1, 0), (1, 0), (0, -1), (0, 1))
+            combo_width, combo_height = get_text_boundaries(combo, matrix_font)
+            combo_x = x_1 + ((cell_size - combo_width) // 2) + 1
+            combo_y = y_1 + ((cell_size - combo_height) // 2) - 2
+            combo_y = combo_y + 1 if 'Q' in combo else combo_y
+            draw.text((combo_x, combo_y), combo, font=matrix_font, fill=combo_text_color)
+            if (combo not in prefolded_combos) and exclusive_shove:
+                off_color = '#ffffff' if hero in ['LJ', 'SB'] else "#404040" if hero in ['UTG', 'HJ'] else '#000000'
+                for offset in xs_offsets:
+                    draw.text((combo_x + offset[0], combo_y + offset[1]), combo, font=matrix_font, fill=off_color)
+                draw.text((combo_x, combo_y), combo, font=matrix_font, fill=color_data[hero][2])
 
-    #     combo_most_frequent_actions = sorted(combo_actions_data, key=lambda action: combo_actions_data[action][0], reverse=True)
-    #     combo_most_frequent_non_fold_actions = sorted((action for action in combo_actions_data if action != "Fold"), key=lambda action: combo_actions_data[action][0], reverse=True)
+            if draw_mode in ['raw', 'ranking']:
+                save = True
+                if need_info:
+                    need_info_width, need_info_height = get_text_boundaries(need_info, idx_font)
+                    draw.text((x_1 + 1 + (cell_size - need_info_width) // 2, y_1 - 1), font=idx_font, text=need_info, fill=combo_text_color)
 
-    #     colors_info = []
-    #     has_play_freq = False
-    #     has_ev = False
-    #     remaining_bars_to_paint = int(cell_inner_size / paint_bar_size)
-    #     for action in combo_most_frequent_actions:
-    #         freq = combo_actions_data[action][0]
-    #         ev = combo_actions_data[action][1]
-    #         if freq > 0:
-    #             if action.startswith("R"):
-    #                 if ev > 0: has_ev = True
-    #                 has_play_freq = True
-    #                 if sorted_raise_actions:
-    #                     raise_idx = sorted_raise_actions_list.index(action)
-    #                 else: raise_idx = 0
-    #                 color = color_data[position][2 + raise_idx]
-    #                 bars_to_paint = int((freq * total_bars_to_paint) / 100)
-    #                 remaining_bars_to_paint -= bars_to_paint
-    #                 spread = ((bars_to_paint + 1) * share) - freq
-    #                 colors_info.append([color, bars_to_paint, spread])
-    #             elif action.startswith("C"):
-    #                 if ev > 0: has_ev = True
-    #                 has_play_freq = True
-    #                 color = color_data[position][1]
-    #                 bars_to_paint = int((freq * total_bars_to_paint) / 100)
-    #                 remaining_bars_to_paint -= bars_to_paint
-    #                 spread = ((bars_to_paint + 1) * share) - freq
-    #                 colors_info.append([color, bars_to_paint, spread])
-    #             elif action.startswith("A"):
-    #                 if ev > 0: has_ev = True
-    #                 has_play_freq = True
-    #                 color = color_data[position][6]
-    #                 bars_to_paint = int((freq * total_bars_to_paint) / 100)
-    #                 remaining_bars_to_paint -= bars_to_paint
-    #                 spread = ((bars_to_paint + 1) * share) - freq
-    #                 colors_info.append([color, bars_to_paint, spread])
-    #             elif action.startswith("F"):
-    #                 color = color_data[position][0]
-    #                 bars_to_paint = int((freq * total_bars_to_paint) / 100)
-    #                 remaining_bars_to_paint -= bars_to_paint
-    #                 spread = ((bars_to_paint + 1) * share) - freq
-    #                 colors_info.append([color, bars_to_paint, spread])
-    #     while remaining_bars_to_paint:
-    #         choosed = min(colors_info, key=lambda x: x[2])
-    #         choosed[1] += 1
-    #         choosed[2] = 100
-    #         remaining_bars_to_paint -= 1
+            if draw_mode == 'ranking':
+                combo_rank = str(combos_order.index(combo) + 1)
+                combo_rank_width, combo_rank_height = get_text_boundaries(combo_rank, idx_font)
+                combo_rank_color = "#a6a6a6" if combo_text_color == "#d9d9d9" else combo_text_color
+                draw.text((x_1 + (cell_size - combo_rank_width), y_1 - 2 + (cell_size - 6)), combo_rank, fill=combo_rank_color, font=idx_font)
+                if (combo not in prefolded_combos) and (combo in folded_combos_order):
+                    folded_combo_rank = str(folded_combos_order.index(combo) + 1)
+                    draw.text((x_1 + 1, y_1 - 1), folded_combo_rank, fill="#000000", font=idx_font)
 
-    #     fold_tiles = 0
-    #     for color_paint_list in colors_info:
-    #         if color_paint_list[0] == "#FFFFFF":
-    #             fold_tiles = color_paint_list[1]
-    #             break
-        
-    #     need_info = False
-    #     if has_play_freq and fold_tiles == total_bars_to_paint:
-    #         act = combo_most_frequent_non_fold_actions[0]
-    #         if act.startswith("R"):
-    #             act_name, act_size = act.split(" ")
-    #             need_info = f"{act_name[0]}{normalize_float(act_size, 1)}"
-    #         else:
-    #             need_info = f"{act[0]}"
-
-    #     colors_info = [ls for ls in colors_info if ls[1] > 0]
-
-    #     combo_colors_info_dict[combo] = colors_info, (need_info, has_play_freq, has_ev, exclusive_shove)
-    # if exclusive_fold_combos:
-    #     folded_combos_order = [c for c in combos_order if c in prefolded_combos or c in exclusive_fold_combos['Fold']]
-    # else:
-    #     folded_combos_order = [c for c in combos_order if c in prefolded_combos]
-    
-    # if print_info: print(f'{spot_combo_with_max_ev = }'); print(f'{spot_max_ev = }'); print(f'{spot_total_ev = }'); print(f'{spot_combos_with_ev = }')
-    # if print_info: print(f'{exclusive_fold_combos = }'); print(f'{combos_with_partial_fold_frequency = }'); print(f'{exclusive_call_combos = }'); print(f'{combos_with_partial_call_frequency = }')
-    # if print_info: print(f'{exclusive_shove_combos = }'); print(f'{combos_with_partial_shove_frequency = }'); print(f'{exclusive_raise_combos = }'); print(f'{combos_with_partial_raise_frequency = }')
-    # if print_info: print(f'{combo_colors_info_dict = }')
-    # if print_info: print('*' * 50)
-    print('************** END <parse_condensed_data> **************')
-    # return combo_colors_info_dict, title_spot_actions_colors_list, combos_order, folded_combos_order, hero_position, spot_actions_taken_label, spot_string, sorted_combos, spot_actions_frequencies
+    return chart
 
 
 
@@ -956,20 +627,50 @@ def main() -> None:
     depths_15_13 = [15, 14, 13] # +0.4
     depths_12_10 = [12, 11, 10] # +0.6
     depths_9_7 = [9, 8, 7] # +0.7
+    depth_6 = [6]
+    depth_5 = [5]
+    depth_4 = [4]
+    depth_3 = [3]
+    depth_2 = [2]
+    depth_1 = [1]
 
-    depths_pool = [depths_200_100, depths_80_45, depths_40_32, depths_30_25, depths_22_19, depths_17_16, depths_15_13, depths_12_10, depths_9_7]
+    depths_pool = [
+        # depths_200_100, 
+        # depths_80_45, 
+        # depths_40_32, 
+        # depths_30_25, 
+        depths_22_19, 
+        # depths_17_16, 
+        # depths_15_13, 
+        # depths_12_10, 
+        # depths_9_7
+    ]
+
+    depths_200_45 = [200, 160, 130, 100, 80, 70, 60, 55, 50, 45]
+    depths_40_26 = [40, 38 ,35, 32, 30, 28 ,26]
+    depths_25_19 = [25, 22, 20, 19]
+   
+    # depths_pool = [
+    #     depths_200_45,
+    #     depths_40_26,
+    #     depths_25_19, 
+    #     depths_17_16, 
+    #     depths_15_13, 
+    #     depths_12_10, 
+    #     depths_9_7
+    # ]
+
     hero = 'UTG1'
     spot_action = 'vs_rfi'
     villain =  'UTG'
 
     for depth_list in depths_pool:
         spot_label, condensed_actions_dict, condensed_combos_dict = get_condensed_range(hero, villain, spot_action, depth_list)
-        parse_condensed_data(condensed_actions_dict, condensed_combos_dict, hero, villain, spot_label, depth_list)
-        print('\n************** <main> debug **************')
-        print(f'\n{condensed_actions_dict = }')
-        # print(f'\n{condensed_combos_dict = }')
+        # print(f'{condensed_combos_dict = }')
+        combo_colors_info_dict, title_spot_actions_colors_list, combos_order, folded_combos_order, hero, sorted_combos, prefolded_combos = parse_condensed_data(condensed_actions_dict, condensed_combos_dict, hero, villain, spot_label, depth_list)
+        chart = draw_chart(combo_colors_info_dict, title_spot_actions_colors_list, combos_order, folded_combos_order, hero, sorted_combos, prefolded_combos)
+        chart.show()
 
-        print("\n####################### MAIN FINISHED !!! #######################\n")
 
 
 if __name__ == "__main__":
