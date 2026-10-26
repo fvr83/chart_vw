@@ -341,7 +341,7 @@ def update_info_image(info_path, quadrant=None):
             x = root.winfo_width() - width - 1
             y = root.winfo_height() - height - 26
 
-    else:
+    else:   
         x = old_x
         y = old_y
 
