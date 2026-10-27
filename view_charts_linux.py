@@ -19,7 +19,8 @@ def on_closing():
     confirm.title("Confirm Exit")
     confirm.geometry("300x100")
     confirm.resizable(False, False),
-    confirm.iconbitmap(resource_path("adds/icon.ico"))
+    confirm_icon = tk.PhotoImage(file=resource_path("adds/icon.png"))
+    confirm.iconphoto(True, confirm_icon)
 
     screen_width = confirm.winfo_screenwidth()
     screen_height = confirm.winfo_screenheight()
@@ -448,7 +449,8 @@ root = tk.Tk()
 root.title("PFMini 0.1")
 root.geometry("1356x701+0+0")
 root.resizable(False, False)
-root.iconbitmap(resource_path("adds/icon.ico"))
+icon = tk.PhotoImage(file=resource_path("adds/icon.png"))
+root.iconphoto(True, icon)
 
 position_var = tk.StringVar(value="EP")
 chart_type_var = tk.StringVar(value='ranking')
@@ -546,4 +548,4 @@ root.bind("-", lambda event: toggle_info_image(resource_path("adds/min.png"), ev
 root.protocol("WM_DELETE_WINDOW", on_closing)
 
 root.mainloop()
-# pyinstaller --onefile --noconsole  --add-data "img_results_test:img_results_test"   --add-data "adds:adds"  view_charts_linux.py
+# pyinstaller --onefile --noconsole --icon="adds/icon.png" --add-data "img_results_test:img_results_test"  --add-data "adds:adds"  view_charts_linux.py
