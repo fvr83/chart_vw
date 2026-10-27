@@ -1,7 +1,17 @@
 import tkinter as tk
 from pathlib import Path
 from PIL import Image, ImageTk
+import sys
 
+
+
+def resource_path(relative_path):
+    if getattr(sys, "frozen", False):
+        base_path = Path(sys._MEIPASS)
+    else:
+        base_path = Path(__file__).resolve().parent
+
+    return base_path / relative_path
 
 
 def show_group(group_index):
@@ -170,11 +180,11 @@ def update_image(quadrant=None):
     info_image = None
     image_depth = Image.new("RGB", (1356, 676), "#FFFFFF")
 
-    default_folder = Path(
+    default_folder = resource_path(
         f"img_results_test/MTT/ChipEV/G0_T0/{chart_type_var.get()}/raise-raise-low/{depth_var.get()}/{position_var.get()}"
     )
 
-    target_folder = Path(
+    target_folder = resource_path(
         f"img_results_test/MTT/ChipEV/G0_T0/{chart_type_var.get()}/{spot_action_var.get()}/{depth_var.get()}/{position_var.get()}"
     )
 
@@ -500,6 +510,7 @@ root.bind("<Button-4>", mouse_zoom)
 root.bind("<Button-5>", mouse_zoom)
 root.bind("<ButtonPress-1>", start_drag)
 root.bind("<B1-Motion>", drag_image)
-root.bind("-", lambda event: toggle_info_image("adds/min.png", event))
+root.bind("-", lambda event: toggle_info_image(resource_path("adds/min.png"), event))
 
 root.mainloop()
+# pyinstaller --onefile --noconsole  --add-data "img_results_test:img_results_test"   --add-data "adds:adds"  view_charts_linux.py
