@@ -14,6 +14,36 @@ def resource_path(relative_path):
     return base_path / relative_path
 
 
+def on_closing():
+    confirm = tk.Toplevel(root)
+    confirm.title("Confirm Exit")
+    confirm.geometry("300x100")
+    confirm.resizable(False, False),
+    confirm.iconbitmap(resource_path("adds/icon.ico"))
+
+    screen_width = confirm.winfo_screenwidth()
+    screen_height = confirm.winfo_screenheight()
+
+    confirm_x = (screen_width // 2) - (300 // 2)
+    confirm_y = (screen_height // 2) - (100 // 2)
+    confirm.geometry(f"300x100+{confirm_x}+{confirm_y}")
+
+    confirm.grab_set()  
+    label = tk.Label(confirm, text="Are you sure you want to quit?")
+    label.pack(pady=10)
+
+    def yes():
+        root.destroy()
+
+    def no():
+        confirm.destroy()
+
+    b1 = tk.Button(confirm, text="Yes", width=10, command=yes)
+    b1.pack(side="left", padx=20, pady=10)
+    b2 = tk.Button(confirm, text="No", width=10, command=no)
+    b2.pack(side="right", padx=20, pady=10)
+
+
 def show_group(group_index):
     global current_group
     current_depth = depth_var.get()
@@ -415,9 +445,10 @@ info_image = None
 jump_keys = ['y', 'u', 'i', 'o', 'p']
 
 root = tk.Tk()
-root.title("XXXXXXXXX")
+root.title("PFMini 0.1")
 root.geometry("1356x701+0+0")
 root.resizable(False, False)
+root.iconbitmap(resource_path("adds/icon.ico"))
 
 position_var = tk.StringVar(value="EP")
 chart_type_var = tk.StringVar(value='ranking')
@@ -511,6 +542,8 @@ root.bind("<Button-5>", mouse_zoom)
 root.bind("<ButtonPress-1>", start_drag)
 root.bind("<B1-Motion>", drag_image)
 root.bind("-", lambda event: toggle_info_image(resource_path("adds/min.png"), event))
+
+root.protocol("WM_DELETE_WINDOW", on_closing)
 
 root.mainloop()
 # pyinstaller --onefile --noconsole  --add-data "img_results_test:img_results_test"   --add-data "adds:adds"  view_charts_linux.py
