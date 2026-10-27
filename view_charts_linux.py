@@ -548,4 +548,4 @@ root.bind("-", lambda event: toggle_info_image(resource_path("adds/min.png"), ev
 root.protocol("WM_DELETE_WINDOW", on_closing)
 
 root.mainloop()
-# pyinstaller --onefile --noconsole --icon="adds/icon.png" --add-data "img_results_test:img_results_test"  --add-data "adds:adds"  view_charts_linux.py
+# pyinstaller --onefile --noconsole --icon="adds/icon.png" --add-data "img_results_test:img_results_test" --add-data "adds:adds" --hidden-import=PIL._tkinter_finder view_charts_linux.py
